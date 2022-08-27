@@ -1,0 +1,78 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+#imports
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+```
+
+### Credit Card Data Intro EDA
+
+1.  Read data
+
+```{bash}
+head -5 ./data\ 2.2/credit_card_data.txt
+```
+
+```{r}
+org_cc_data <- read.table(file = './data 2.2/credit_card_data-headers.txt', sep = "\t", header = TRUE)
+dim(org_cc_data)
+class(org_cc_data)
+org_cc_data
+```
+
+2.  Summary of Data
+
+```{r}
+summary(org_cc_data)
+#class(summary(org_cc_data))
+```
+
+**A1,A9,A10,A12 are binary basis min/max values, rest are continuous**
+**For target variable mean is ~45% ==> variable is not imbalanced**
+
+3.  Distribution of Data
+
+```{r}
+my_plots <- lapply(names(org_cc_data), function(var_x){
+  p <- 
+    ggplot(org_cc_data) +
+    aes_string(var_x)
+
+  if(var_x %in% list("A1","A9","A10","A12","R1")) {
+    p <- p + geom_bar()
+
+  } else {
+    p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+#class(summary(org_cc_data))
+```
+**A15 seems highly skewed towards right side and A11 seems slightly skewed**
+
+4.  Correlation Heat Map
+```{r}
+cormat <- round(cor(org_cc_data),2)
+cormat[upper.tri(cormat)] <- NA
+melted_cormat <- melt(cormat)
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var1, Var2, label = value),
+          color = "white", size = 3)
+```
+If |cor| >0.3 ==> Significant (Let)
+R1: A8,A9,A10,A11
+A11: A8,A9,A10
+A10: A9
+A9: A8
+A8: A2
