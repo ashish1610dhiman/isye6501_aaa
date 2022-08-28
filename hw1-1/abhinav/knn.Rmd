@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: github_document
+---
+
+```{r}
+#imports
+library(kknn)
+```
+
+```{r}
+knn_data<-read.table("./hw1-1/data 2.2/credit_card_data-headers.txt",sep='\t',header=TRUE)
+dim(knn_data)
+```
+
+```{r}
+# Plain version with kernel as optimised 
+knn_pred<-vector(mode="list",length = dim(knn_data)[1])
+pred_table<-data.frame(k_val=numeric(0),acc_val=double(0))
+for (k0 in seq(1,nrow(knn_data),by=10)){
+  for (i in 1:nrow(knn_data)){
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="optimal",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) 
+  }
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
+}
+```
+
+```{r}
+# need to iterate for lower values of K
+plot(pred_table)
+```
+
+```{r}
+knn_pred<-vector(mode="list",length = dim(knn_data)[1])
+pred_table<-data.frame(k_val=numeric(0),acc_val=double(0))
+for (k0 in seq(1,25,by=3)){
+  for (i in 1:nrow(knn_data)){
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="optimal",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) 
+  }
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
+}
+```
