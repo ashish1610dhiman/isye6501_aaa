@@ -1,0 +1,97 @@
+---
+title: "SVM modelling iterations Ashish"
+output: github_document
+---
+
+```{r}
+library(kernlab)
+library(ggplot2)
+```
+
+### Read Data
+
+```{r}
+org_cc_data <- read.table(file = '../data 2.2/credit_card_data-headers.txt', sep = "\t", header = TRUE)
+dim(org_cc_data)
+names(org_cc_data)
+```
+
+### v0: Vanilla Model and Accuracy
+
+```{r}
+model_v0 = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 10)
+#model_v0
+
+acc_func <- function(model) {
+   pred_all <- predict(model,org_cc_data[,1:10])
+   print (paste("Overall Acc:", round(sum(pred_all == org_cc_data[,11]) * 100 / nrow(org_cc_data),4)))
+   
+   pred_1 <- predict(model,org_cc_data[org_cc_data$R1 == 1,1:10])
+   print (paste("Acc in 1's:", round(sum(pred_1 == org_cc_data[org_cc_data$R1 == 1,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 1,1:10]),4)))
+   
+   pred_0 <- predict(model,org_cc_data[org_cc_data$R1 == 0,1:10])
+   print (paste("Acc in 0's:", round(sum(pred_0 == org_cc_data[org_cc_data$R1 == 0,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 0,1:10]),4)))
+}
+
+acc_func(model_v0)
+```
+
+### v1: Optimise C: Find best window for linear search
+
+```{r}
+C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  acc_func(ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = C_i))
+  print("")
+}
+```
+
+### v2: vanilla but capping A15
+
+```{r}
+hist(org_cc_data$A15, freq = FALSE, breaks = 100)
+hist(log(org_cc_data$A15), freq = FALSE, breaks = 100)
+#lines(density(x))
+
+
+cc_data1 = org_cc_data
+cc_data1$A15 = log(0.001 + cc_data1$A15)
+acc_func(ksvm(x=as.matrix(cc_data1[,1:10]), y=cc_data1[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 0.007))
+```
+### Final model and equation
+
+```{r}
+modelf = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 0.0015)
+acc_func(modelf)
+
+a <- colSums(modelf@xmatrix[[1]] * modelf@coef[[1]])
+a0 <- -modelf@b
+a0
+```
+
+
+### Non Linear models: Radial Basis Kernel
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "rbfdot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```
+
+### Non Linear models: Laplace Kernel
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "laplacedot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```

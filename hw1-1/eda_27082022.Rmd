@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "eda"
 output: github_document
 ---
 
@@ -70,7 +70,7 @@ geom_tile() +
 geom_text(aes(Var1, Var2, label = value),
           color = "white", size = 3)
 ```
-If |cor| >0.3 ==> Significant (Let)
+If |cor| > 0.3 ==> Significant (Let)
 R1: A8,A9,A10,A11
 A11: A8,A9,A10
 A10: A9
