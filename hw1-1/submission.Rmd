@@ -1,0 +1,155 @@
+---
+title: "Submission HW1"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Submission for HW1 \| ISYE 6501 \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \|
+
+-   Anshit Verma \|
+
+## Question 2.1
+
+**Describe a situation or problem from your job, everyday life, current events, etc., for which a classification model would be appropriate. List some (up to 5) predictors that you might use.**
+
+### Example 1: Credit Risk Evaluation
+
+Classification models find use cases across a spectrum of Credit Risk functions. A typical example being classifying a particular transaction as risky or otherwise basis which it is either declined or authorized. Here risk implies that the individual might not be able to make the required payments in the future, and therefore transactions made are riskier.
+
+**Objective Function (**$Y$): To classify individual transactions as risky (decline) or not.\
+**Predictor Variables (**$X_i$): Some of the key predictor variables given below:
+
+-   ***Past Delinquency***: Delinquency implies that the individual was unable to keep up on his monthly payments previously and missed on his obligated payments. This is a key marker for credit risk, and past delinquent behavior hints towards potential future risk.
+
+-   ***Credit Utilization***: Credit Utilization is defined as the ratio of current balance to overall credit limit accorded to the individual. Suppose a individual has a credit line of \$10,000 and he already has utilized \$ 9k of it. This individual is generally prone to more risk as compared to the individual who only has utilized say \$ 2k of his \$ 10k line.
+
+-   ***Current Debt to Income ratio***: This is a measure of Income to Debt Capacity of the individual. In other words, it stacks up the overall debt obligations of the individual across mortgage, auto loan, credit cards etc., against his total income. If a larger part of an individual's income is directed towards his debt payment, than he/she again might be more susceptible to miss payments in the future and hence is riskier.
+
+-   ***Amount of Transaction***: This is the dollar amount of the transaction. Intuitively a transaction of \$20k is riskier than \$5, since even if the individual misses his payment, the hit taken by the firm is restricted to only \$5.
+
+## Question 2.2
+
+**The files credit_card_data.txt (without headers) and credit_card_data-headers.txt (with headers) contain a dataset with 654 data points, 6 continuous and 4 binary predictor variables. It has anonymized credit card applications with a binary response variable (last column) indicating if the application was positive or negative.**
+
+### Exploratory Data Analysis (EDA)
+
+```{r}
+#imports
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+```
+
+#### Read Data and Summary
+
+```{r}
+org_cc_data <- read.table(file = './data 2.2/credit_card_data-headers.txt', sep = "\t", header = TRUE)
+dim(org_cc_data)
+head(org_cc_data)
+summary(org_cc_data)
+```
+
+**A1,A9,A10,A12 are binary basis min/max values, rest are continuous**
+
+**For target variable mean is \~45% ==\> variable is not grossly imbalanced**
+
+#### Data Distribution and Co relation
+
+```{r}
+### Data Distribution
+my_plots <- lapply(names(org_cc_data), function(var_x){
+  p <- 
+    ggplot(org_cc_data) +
+    aes_string(var_x)
+
+  if(var_x %in% list("A1","A9","A10","A12","R1")) {
+    p <- p + geom_bar()
+
+  } else {
+    p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+
+### Corealtion
+cormat <- round(cor(org_cc_data),2)
+cormat[upper.tri(cormat)] <- NA
+melted_cormat <- melt(cormat)
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var1, Var2, label = value),
+          color = "white", size = 3)
+```
+
+**If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:**
+
+-   R1: A8,A9,A10,A11
+
+-   A11: A8,A9,A10
+
+-   A10: A9
+
+-   A9: A8
+
+-   A8: A2
+
+## Question 2.2 (part 1)
+
+**Using the support vector machine function ksvm contained in the R package kernlab, find a good classifier for this data. Show the equation of your classifier, and how well it classifies the data points in the full data set. (Don't worry about test/validation data yet; we'll cover that topic soon.)**
+
+```{r}
+#imports
+library(kernlab)
+library(ggplot2)
+```
+
+```{r}
+dim(org_cc_data)
+names(org_cc_data)
+```
+
+### v0: Vanilla Model and Accuracy function
+
+```{r}
+model_v0 = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 10)
+
+### Accuracy function: Overall and in each class
+acc_func <- function(model) {
+   pred_all <- predict(model,org_cc_data[,1:10])
+   print (paste("Overall Acc:", round(sum(pred_all == org_cc_data[,11]) * 100 / nrow(org_cc_data),4)))
+   
+   pred_1 <- predict(model,org_cc_data[org_cc_data$R1 == 1,1:10])
+   print (paste("Acc in 1's:", round(sum(pred_1 == org_cc_data[org_cc_data$R1 == 1,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 1,1:10]),4)))
+   
+   pred_0 <- predict(model,org_cc_data[org_cc_data$R1 == 0,1:10])
+   print (paste("Acc in 0's:", round(sum(pred_0 == org_cc_data[org_cc_data$R1 == 0,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 0,1:10]),4)))
+}
+
+acc_func(model_v0)
+print(paste("#Support Vectors",model_v0@nSV))
+```
+
+### v1: Optimise C
+
+```{r}
+C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03) #Range identified with hit and trial
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  acc_func(ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = C_i))
+  print("")
+}
+```
+
+**C=0.015 seems the best option, because even with almost equal accuracy, the accuracy in the negative class is higher, where for other C values the accuracy amongst classes is more lopsided**

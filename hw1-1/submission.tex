@@ -1,0 +1,125 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Submission HW1},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Submission HW1}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+Submission for HW1 \textbar{} ISYE 6501 \textbar{} Fall 22\\
+- Ashish Dhiman \textbar{}
+\href{mailto:ashish.dhiman@gatech.edu}{\nolinkurl{ashish.dhiman@gatech.edu}}
+- Abhinav Arun \textbar{}\\
+- Anshit Verma \textbar{}
+
+\hypertarget{question-2.1}{%
+\subsection{Question 2.1}\label{question-2.1}}
+
+\textbf{Describe a situation or problem from your job, everyday life,
+current events, etc., for which a classification model would be
+appropriate. List some (up to 5) predictors that you might use.}
+
+\hypertarget{example-1-credit-risk-evaluation}{%
+\paragraph{Example 1: Credit Risk
+Evaluation}\label{example-1-credit-risk-evaluation}}
+
+Classification models find use cases across a spectrum of Credit Risk
+functions. A typical example being classifying a particular transaction
+as risky or otherwise basis which it is either declined or authorized.
+Here risk implies that the individual might not be able to make the
+required payments in the future, and therefore transactions made are
+riskier.
+
+Objective Function (\(Y\)): To classify individual transactions as risky
+(decline) or not Predictor Variables (\(X_i\)): Some of the key
+predictor variables given below:
+
+Past Delinquency: Delinquency implies that the individual was unable to
+keep up on his monthly payments previously and missed on his obligated
+payments. This is a key marker for credit risk, and past delinquent
+behavior hints towards potential future risk.
+
+Credit Utilization: Credit Utilization is defined as the ratio of
+current balance to overall credit limit accorded to the individual.
+Suppose a individual has a credit line of \$10,000 and he already has
+utilized \$ 9k of it. This individual is generally prone to more risk as
+compared to the individual who only has utilized say \$ 2k of his \$ 10k
+line.
+
+Current Debt to Income ratio: This is a measure of Income to Debt
+Capacity of the individual. In other words, it stacks up the overall
+debt obligations of the individual across mortgage, auto loan, credit
+cards etc., against his total income. If a larger part of an
+individual's income is directed towards his debt payment, than he/she
+again might be more susceptible to miss payments in the future and hence
+is riskier.
+
+Amount of Transaction: This is the dollar amount of the transaction.
+Intuitively a transaction of \$20k is riskier than \$5, since even if
+the individual misses his payment, the hit taken by the firm is
+restricted to only \$5.
+
+\end{document}
