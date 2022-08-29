@@ -1,21 +1,22 @@
 ---
 title: "Submission HW1"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
 
-# Submission for HW1 \| ISYE 6501 \| Fall 22
+# ISYE 6501 \| Fall 22
 
 -   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
 
--   Abhinav Arun \|
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
 
--   Anshit Verma \|
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
 ## Question 2.1
-
-**Describe a situation or problem from your job, everyday life, current events, etc., for which a classification model would be appropriate. List some (up to 5) predictors that you might use.**
 
 ### Example 1: Credit Risk Evaluation
 
@@ -34,8 +35,6 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 
 ## Question 2.2
 
-**The files credit_card_data.txt (without headers) and credit_card_data-headers.txt (with headers) contain a dataset with 654 data points, 6 continuous and 4 binary predictor variables. It has anonymized credit card applications with a binary response variable (last column) indicating if the application was positive or negative.**
-
 ### Exploratory Data Analysis (EDA)
 
 ```{r}
@@ -53,6 +52,8 @@ dim(org_cc_data)
 head(org_cc_data)
 summary(org_cc_data)
 ```
+
+[**#Analysis:**]{style="color:red"}
 
 **A1,A9,A10,A12 are binary basis min/max values, rest are continuous**
 
@@ -92,9 +93,11 @@ geom_text(aes(Var1, Var2, label = value),
           color = "white", size = 3)
 ```
 
+[**#Analysis:**]{style="color:red"}
+
 **If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:**
 
--   R1: A8,A9,A10,A11
+-   R1: A8,A9,A10,A11 (We expect these to show up with high weights in SVM eqn.)
 
 -   A11: A8,A9,A10
 
@@ -104,9 +107,7 @@ geom_text(aes(Var1, Var2, label = value),
 
 -   A8: A2
 
-## Question 2.2 (part 1)
-
-**Using the support vector machine function ksvm contained in the R package kernlab, find a good classifier for this data. Show the equation of your classifier, and how well it classifies the data points in the full data set. (Don't worry about test/validation data yet; we'll cover that topic soon.)**
+## Question 2.2 (part 1: kSVM with Linear kernel)
 
 ```{r}
 #imports
@@ -140,6 +141,9 @@ acc_func(model_v0)
 print(paste("#Support Vectors",model_v0@nSV))
 ```
 
+[**#Analysis:**]{style="color:red"}
+**There are 190 support vectors, or roughly 30% of the total data points.
+
 ### v1: Optimise C
 
 ```{r}
@@ -152,4 +156,12 @@ for (C_i in C_values) {
 }
 ```
 
+[**#Analysis:**]{style="color:red"}
+**With increasing C, we weight the cost function more towards misclassification (realtive to margin). Therefore intuitively incereasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent**
+
 **C=0.015 seems the best option, because even with almost equal accuracy, the accuracy in the negative class is higher, where for other C values the accuracy amongst classes is more lopsided**
+
+### v1: Equation of SVM
+$W = \sum_i(\alpha Y_i X_{support\_vector_i})$$
+
+
