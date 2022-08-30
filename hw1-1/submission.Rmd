@@ -20,7 +20,7 @@ output:
 
 ### Example 1: Credit Risk Evaluation
 
-Classification models find use cases across a spectrum of Credit Risk functions. A typical example being classifying a particular transaction as risky or otherwise basis which it is either declined or authorized. Here risk implies that the individual might not be able to make the required payments in the future, and therefore transactions made are riskier.
+Classification models find use cases across a spectrum of Credit Risk functions. A typical example is to a authorize or decline a transaction basis its classification as "risky" or not. Here "risky" implies that the individual might not be able to make the required payments in the future, and therefore transactions made are riskier.
 
 **Objective Function (**$Y$): To classify individual transactions as risky (decline) or not.\
 **Predictor Variables (**$X_i$): Some of the key predictor variables given below:
@@ -38,7 +38,7 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 ### Exploratory Data Analysis (EDA)
 
 ```{r}
-#imports
+#lib imports
 library(cowplot)
 library(ggplot2)
 library(reshape2)
@@ -55,11 +55,22 @@ summary(org_cc_data)
 
 [**#Analysis:**]{style="color:red"}
 
-**A1,A9,A10,A12 are binary basis min/max values, rest are continuous**
+A1,A9,A10,A12 are binary basis min/max values, rest are continuous
 
-**For target variable mean is \~45% ==\> variable is not grossly imbalanced**
+For target variable mean is \~45% ==\> variable is not grossly imbalanced
 
-#### Data Distribution and Co relation
+```{r}
+org_cc_data1 = org_cc_data
+my_groups <- rep("Negative", nrow(org_cc_data))
+my_groups[org_cc_data$R > 0] <- "Positive"
+org_cc_data1$my_groups <- my_groups
+
+# ggp <- ggplot(org_cc_data1, aes(A3, fill = my_groups)) +  # Seprate density basis label
+#   geom_density(alpha=.34) #Make Transperent
+# ggp  
+```
+
+#### Data Distribution and Pairwise Corelation
 
 ```{r}
 ### Data Distribution
@@ -73,6 +84,24 @@ my_plots <- lapply(names(org_cc_data), function(var_x){
 
   } else {
     p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+### Seperate Distribution by class labels
+my_plots <- lapply(names(org_cc_data1[,1:11]), function(var_x){
+  p <-
+    ggplot(org_cc_data1[,1:11], aes(var_x, fill = my_groups)) + theme(legend.position="none") +
+    aes_string(var_x)
+  
+  if(var_x %in% list("A1","A9","A10","A12","R1")) {
+    p <- p + geom_bar()
+
+  }
+  else {
+    p <- p + geom_density(alpha=.34)
   } 
 
 })
@@ -95,17 +124,27 @@ geom_text(aes(Var1, Var2, label = value),
 
 [**#Analysis:**]{style="color:red"}
 
-**If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:**
+-   [Distribution:]{.underline}
 
--   R1: A8,A9,A10,A11 (We expect these to show up with high weights in SVM eqn.)
+    From variables distribution it is apparent that a few variables like A15 are highly skewed.
 
--   A11: A8,A9,A10
+-   [Distribution split basis Class:]{.underline}
 
--   A10: A9
+    Variables like A9 and A10 exhibit disparity in the label distribution, and hence we expect these variables to show up with stronger weights in SVM equation
 
--   A9: A8
+-   [Pairwise Corelation:]{.underline}
 
--   A8: A2
+    If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:
+
+    -   R1: A8,A9,A10,A11 (We expect these to show up with high weights in SVM eqn.)
+
+    -   A11: A8,A9,A10
+
+    -   A10: A9
+
+    -   A9: A8
+
+    -   A8: A2
 
 ## Question 2.2 (part 1: kSVM with Linear kernel)
 
@@ -141,48 +180,63 @@ acc_func(model_v0)
 print(paste("#Support Vectors",model_v0@nSV))
 ```
 
-[**#Analysis:**]{style="color:red"} \*\*There are 190 support vectors, or roughly 30% of the total data points.
+[**#Analysis:**]{style="color:red"}
 
-### v1: Optimise C
+There are 190 support vectors, or roughly 30% of the total data points, which on first instance seems pretty large. It could be though that many points are in a close neighborhood and therefore a significant number of these points lie near the margin lines.
+
+### Model v1: Optimise C
 
 ```{r}
-C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03) #Range identified with hit and trial
+C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03,0.1,0.5,1) #Range identified with hit and trial
 
 for (C_i in C_values) {
   print (paste("For C = ",C_i))
   acc_func(ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = C_i))
+  print(paste("#Support Vectors",model_v0@nSV))
   print("")
 }
 ```
 
-[**#Analysis:**]{style="color:red"} **With increasing C, we weight the cost function more towards misclassification (realtive to margin). Therefore intuitively incereasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent**
+[**#Analysis:**]{style="color:red"}
 
-**C=0.015 seems the best option, because even with almost equal accuracy, the accuracy in the negative class is higher, where for other C values the accuracy amongst classes is more lopsided**
+With increasing C, we weight the cost function more towards mis-classification (relative to margin). Therefore intuitively increasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent, as Accuracy first increases and then plateaus.
+
+With Accuracy plateauing 86%, there are two viable C values:
+
+-   C=0.015: For this option provides the overall accuracy is 86% but accuracy in the negative class is higher, whereas for higher C values the accuracy among class groups is more lopsided
+
+-   C=0.001: While here the overall accuracy drops to 83% but accuracy in the negative class is significantly higher at 92%, and given this is a loan application example, it might be better to gear the model more towards the negative class.
 
 ### Final SVM Model and it's equation
-
-$W = \sum_i(\alpha Y_i X_{support\_vector_i})$
 
 ```{r}
 modelf = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 0.0015)
 acc_func(modelf)
+```
 
+The coefficients of SVM decision boundary is expressed as: $W = \sum_{i \in Supoort\ Vectors}(\alpha_i Y_i X_i)$
+
+```{r}
 a <- colSums(modelf@xmatrix[[1]] * modelf@coef[[1]])
 a0 <- -modelf@b
-a
+sort(a)
 a0
 ```
+
 [**#Analysis:**]{style="color:red"}
+
+As expected (from distribution plots) variables A9, A11, A8, A10 show very significant weights in the decision boundary. Similarly variables like A1,A2 have very low weights, and can also be dropped.
 
 ## Question 2.2 (part 2: kSVM with Non Linear kernel)
 
-We have tried 2 kernels:
+Non Linear kernels work by transposing the actual data into a higher dimensional space. Here we have tried two kernels, both of which transform data to the infinite dimension space.
 
 1.  Radial Basis, and
 
 2.  Laplace
 
 ### Non Linear models: Radial Basis Kernel
+
 ```{r}
 C_values <- c(0.01,1,10,50,100,1000,2000)
 
@@ -194,7 +248,12 @@ for (C_i in C_values) {
 }
 ```
 
+[**#Analysis:**]{style="color:red"}
+
+As seen for Linear Kernels, increase in C, increases accuracy while decreasing number of support vectors. Because this is a very complex model, we are able to get very high accuracy, however we can't be sure if the same would generalize to unseen data.
+
 ### Non Linear models: Laplace Kernel
+
 ```{r}
 C_values <- c(0.01,1,10,50,100,1000,2000)
 
@@ -205,3 +264,9 @@ for (C_i in C_values) {
   print(modeli@nSV)
 }
 ```
+
+[**#Analysis:**]{style="color:red"}
+
+Here again we are able to get 100 accuracy, however we can't be sure if the same would generalize to unseen data.
+
+## Question 2.3 (knn Model)
