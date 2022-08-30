@@ -42,6 +42,7 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 library(cowplot)
 library(ggplot2)
 library(reshape2)
+library(kknn)
 ```
 
 #### Read Data and Summary
@@ -270,3 +271,30 @@ for (C_i in C_values) {
 Here again we are able to get 100 accuracy, however we can't be sure if the same would generalize to unseen data.
 
 ## Question 2.3 (knn Model)
+
+### Vanilla knn model
+
+We implement vanilla knn model here, with rectangular kernel and majority voting (i.e probability threshold \>0.5) among neighbors to decide predicted label.
+
+```{r}
+# Rectangular(unweighted) kernel as optimised 
+knn_pred <- vector(mode="list",length = dim(knn_data)[1])
+pred_table <- data.frame(k_val=numeric(0),acc_val=double(0)) #dataframe to hold accuracy with k
+for (k0 in seq(1,nrow(knn_data),by=25)){ #To loop over k values
+  for (i in 1:nrow(knn_data)){ #To loop over indvidual data points
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) #majority voting > 0.5
+  }
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
+}
+plot(pred_table)
+```
+
+[**#Analysis:**]{style="color:red"}
+
+The graph above here plots Accuracy on y-axis vs 'k'. As we increase the k, Accuracy is mostly static and after a certain threshold, it starts dropping almost linearly to 55%, where it then stabilizes. The 55% number here is intuitive since with as many nearest neighbors as the #data points, the prediction decision basically boils down to assigning the majority label in the dataset, i.e. Negative. Therefore, for 55% the negative class, we receive a correct prediction while the rest 45% Positive class is misclassified.
+
+### Optimisation over 'k' and probability threshold
+
+[**#Analysis:**]{style="color:red"}
