@@ -1,6 +1,6 @@
 ---
 title: "R Notebook"
-output: github_document
+output: html_document
 ---
 
 ```{r}
@@ -28,19 +28,89 @@ for (k0 in seq(1,nrow(knn_data),by=10)){
 ```
 
 ```{r}
-# need to iterate for lower values of K
+# iteration over all values of K in increments of 10 to get a probable range where max accuarcy is attained
+plot(pred_table)
+```
+
+```{r}
+# Rectangular(unweighted) kernel as optimised 
+knn_pred<-vector(mode="list",length = dim(knn_data)[1])
+pred_table<-data.frame(k_val=numeric(0),acc_val=double(0))
+for (k0 in seq(1,nrow(knn_data),by=10)){
+  for (i in 1:nrow(knn_data)){
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) 
+  }
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
+}
 plot(pred_table)
 ```
 
 ```{r}
 knn_pred<-vector(mode="list",length = dim(knn_data)[1])
 pred_table<-data.frame(k_val=numeric(0),acc_val=double(0))
-for (k0 in seq(1,25,by=3)){
+for (k0 in seq(1,30,by=1)){
   for (i in 1:nrow(knn_data)){
-    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="optimal",scale = TRUE)
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
     knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) 
   }
   percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
   pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
 }
+# Iteration over lower values of K
+plot(pred_table)
+```
+
+```{r}
+#set of all k values where overall accuracy is maximum
+pred_table$k_val[pred_table$acc_val==max(pred_table$acc_val,na.rm=TRUE)]
+```
+
+```{r}
+#anshit to review from here -> loop over k and get a dataframe with k,threshold and auc value, accuracies
+k0=21
+test_pred<-data.frame(pred_val=double(0),act_class=numeric(0))
+for (i in 1:nrow(knn_data)){
+    knn_model_v1<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+    knn_pred[i]<-as.double(fitted(knn_model_v1))
+    test_pred[nrow(test_pred)+1,]=c(knn_pred[i],knn_data$R1[i])
+}
+```
+
+```{r}
+accuracy_knn <- function(df){
+  acc_overall = sum(df$act_class == df$pred_class)/nrow(df)
+  df_1 = df[df$act_class > 0,]
+  df_0 = df[df$act_class == 0,]
+  acc_1 = sum(df_1$act_class == df_1$pred_class)/nrow(df_1)
+  acc_0 = sum(df_0$act_class == df_0$pred_class)/nrow(df_0)
+  return (c(acc_overall, acc_1, acc_0))
+}
+```
+
+```{r}
+threshold_auc<-data.frame(threshold_val=double(0),auc_val=double(0),acc_overall=double(0),acc_1=double(0),acc_0=double(0))
+for(t0 in seq(0.2,0.8,by=0.02)){
+  f0<-function(x,t=t0){
+    ifelse(x>t,1,0)
+  }
+  test_pred$pred_class<-apply(data.frame(test_pred$pred_val),1,f0)
+  # function to get overall , 0's and 1's accuracy
+  # accuracy_knn(test_pred)
+  auc_val<-auc(test_pred$act_class,test_pred$pred_class)
+  threshold_auc[nrow(threshold_auc)+1,]=c(t0,auc_val,accuracy_knn(test_pred))
+}
+``` 
+
+```{r}
+head(threshold_auc)
+accuracy_knn(test_pred)
+```
+
+```{r}
+#roc_score=roc(test_pred$act_class,test_pred$pred_class)
+#plot(roc_score ,main ="ROC curve --KNN ")
+print(paste("Max AUC score :" ,round(max(threshold_auc$auc_val),2)))
+print(paste("Threshold values for which max AUC score is attained", threshold_auc$threshold_val[threshold_auc$auc_val==max(threshold_auc$auc_val,na.rm=TRUE)]))
 ```
