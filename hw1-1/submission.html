@@ -1872,10 +1872,126 @@ apparent</strong></p>
 accuracy, the accuracy in the negative class is higher, where for other
 C values the accuracy amongst classes is more lopsided</strong></p>
 </div>
-<div id="v1-equation-of-svm" class="section level3">
-<h3>v1: Equation of SVM</h3>
+<div id="final-svm-model-and-its-equation" class="section level3">
+<h3>Final SVM Model and it’s equation</h3>
 <p><span class="math inline">\(W = \sum_i(\alpha Y_i
-X_{support\_vector_i})\)</span>$</p>
+X_{support\_vector_i})\)</span></p>
+<pre class="r"><code>modelf = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = &quot;C-svc&quot;,kernel = &quot;vanilladot&quot;, C = 0.0015)</code></pre>
+<pre><code>##  Setting default kernel parameters</code></pre>
+<pre class="r"><code>acc_func(modelf)</code></pre>
+<pre><code>## [1] &quot;Overall Acc: 86.3914&quot;
+## [1] &quot;Acc in 1&#39;s: 86.4865&quot;
+## [1] &quot;Acc in 0&#39;s: 86.3128&quot;</code></pre>
+<pre class="r"><code>a &lt;- colSums(modelf@xmatrix[[1]] * modelf@coef[[1]])
+a0 &lt;- -modelf@b
+a</code></pre>
+<pre><code>##           A1           A2           A3           A8           A9          A10 
+## -0.002338189  0.014772779  0.028456317  0.107513742  0.488038438 -0.227739624 
+##          A11          A12          A14          A15 
+##  0.169625021 -0.005341560 -0.022222264  0.096388833</code></pre>
+<pre class="r"><code>a0</code></pre>
+<pre><code>## [1] -0.1072752</code></pre>
+<p><span style="color:red"><strong>#Analysis:</strong></span></p>
+</div>
+</div>
+<div id="question-2.2-part-2-ksvm-with-non-linear-kernel" class="section level2">
+<h2>Question 2.2 (part 2: kSVM with Non Linear kernel)</h2>
+<p>We have tried 2 kernels:</p>
+<ol style="list-style-type: decimal">
+<li><p>Radial Basis, and</p></li>
+<li><p>Laplace</p></li>
+</ol>
+<div id="non-linear-models-radial-basis-kernel" class="section level3">
+<h3>Non Linear models: Radial Basis Kernel</h3>
+<pre class="r"><code>C_values &lt;- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste(&quot;For C = &quot;,C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = &quot;C-svc&quot;,kernel = &quot;rbfdot&quot;, C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}</code></pre>
+<pre><code>## [1] &quot;For C =  0.01&quot;
+## [1] &quot;Overall Acc: 56.1162&quot;
+## [1] &quot;Acc in 1&#39;s: 3.0405&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 593
+## [1] &quot;For C =  1&quot;
+## [1] &quot;Overall Acc: 87.156&quot;
+## [1] &quot;Acc in 1&#39;s: 94.2568&quot;
+## [1] &quot;Acc in 0&#39;s: 81.2849&quot;
+## [1] 271
+## [1] &quot;For C =  10&quot;
+## [1] &quot;Overall Acc: 91.896&quot;
+## [1] &quot;Acc in 1&#39;s: 91.2162&quot;
+## [1] &quot;Acc in 0&#39;s: 92.4581&quot;
+## [1] 262
+## [1] &quot;For C =  50&quot;
+## [1] &quot;Overall Acc: 94.8012&quot;
+## [1] &quot;Acc in 1&#39;s: 93.2432&quot;
+## [1] &quot;Acc in 0&#39;s: 96.0894&quot;
+## [1] 252
+## [1] &quot;For C =  100&quot;
+## [1] &quot;Overall Acc: 95.7187&quot;
+## [1] &quot;Acc in 1&#39;s: 93.9189&quot;
+## [1] &quot;Acc in 0&#39;s: 97.2067&quot;
+## [1] 245
+## [1] &quot;For C =  1000&quot;
+## [1] &quot;Overall Acc: 98.4709&quot;
+## [1] &quot;Acc in 1&#39;s: 97.6351&quot;
+## [1] &quot;Acc in 0&#39;s: 99.162&quot;
+## [1] 222
+## [1] &quot;For C =  2000&quot;
+## [1] &quot;Overall Acc: 98.7768&quot;
+## [1] &quot;Acc in 1&#39;s: 97.6351&quot;
+## [1] &quot;Acc in 0&#39;s: 99.7207&quot;
+## [1] 219</code></pre>
+</div>
+<div id="non-linear-models-laplace-kernel" class="section level3">
+<h3>Non Linear models: Laplace Kernel</h3>
+<pre class="r"><code>C_values &lt;- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste(&quot;For C = &quot;,C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = &quot;C-svc&quot;,kernel = &quot;laplacedot&quot;, C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}</code></pre>
+<pre><code>## [1] &quot;For C =  0.01&quot;
+## [1] &quot;Overall Acc: 54.7401&quot;
+## [1] &quot;Acc in 1&#39;s: 0&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 594
+## [1] &quot;For C =  1&quot;
+## [1] &quot;Overall Acc: 86.3914&quot;
+## [1] &quot;Acc in 1&#39;s: 94.2568&quot;
+## [1] &quot;Acc in 0&#39;s: 79.8883&quot;
+## [1] 354
+## [1] &quot;For C =  10&quot;
+## [1] &quot;Overall Acc: 95.2599&quot;
+## [1] &quot;Acc in 1&#39;s: 95.6081&quot;
+## [1] &quot;Acc in 0&#39;s: 94.9721&quot;
+## [1] 363
+## [1] &quot;For C =  50&quot;
+## [1] &quot;Overall Acc: 99.6942&quot;
+## [1] &quot;Acc in 1&#39;s: 99.3243&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 379
+## [1] &quot;For C =  100&quot;
+## [1] &quot;Overall Acc: 100&quot;
+## [1] &quot;Acc in 1&#39;s: 100&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 379
+## [1] &quot;For C =  1000&quot;
+## [1] &quot;Overall Acc: 100&quot;
+## [1] &quot;Acc in 1&#39;s: 100&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 378
+## [1] &quot;For C =  2000&quot;
+## [1] &quot;Overall Acc: 100&quot;
+## [1] &quot;Acc in 1&#39;s: 100&quot;
+## [1] &quot;Acc in 0&#39;s: 100&quot;
+## [1] 378</code></pre>
 </div>
 </div>
 </div>

@@ -1,9 +1,9 @@
 ---
 title: "Submission HW1"
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 # ISYE 6501 \| Fall 22
@@ -141,8 +141,7 @@ acc_func(model_v0)
 print(paste("#Support Vectors",model_v0@nSV))
 ```
 
-[**#Analysis:**]{style="color:red"}
-**There are 190 support vectors, or roughly 30% of the total data points.
+[**#Analysis:**]{style="color:red"} \*\*There are 190 support vectors, or roughly 30% of the total data points.
 
 ### v1: Optimise C
 
@@ -156,12 +155,53 @@ for (C_i in C_values) {
 }
 ```
 
-[**#Analysis:**]{style="color:red"}
-**With increasing C, we weight the cost function more towards misclassification (realtive to margin). Therefore intuitively incereasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent**
+[**#Analysis:**]{style="color:red"} **With increasing C, we weight the cost function more towards misclassification (realtive to margin). Therefore intuitively incereasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent**
 
 **C=0.015 seems the best option, because even with almost equal accuracy, the accuracy in the negative class is higher, where for other C values the accuracy amongst classes is more lopsided**
 
-### v1: Equation of SVM
-$W = \sum_i(\alpha Y_i X_{support\_vector_i})$$
+### Final SVM Model and it's equation
 
+$W = \sum_i(\alpha Y_i X_{support\_vector_i})$
 
+```{r}
+modelf = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 0.0015)
+acc_func(modelf)
+
+a <- colSums(modelf@xmatrix[[1]] * modelf@coef[[1]])
+a0 <- -modelf@b
+a
+a0
+```
+[**#Analysis:**]{style="color:red"}
+
+## Question 2.2 (part 2: kSVM with Non Linear kernel)
+
+We have tried 2 kernels:
+
+1.  Radial Basis, and
+
+2.  Laplace
+
+### Non Linear models: Radial Basis Kernel
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "rbfdot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```
+
+### Non Linear models: Laplace Kernel
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "laplacedot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```
