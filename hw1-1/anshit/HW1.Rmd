@@ -1,0 +1,129 @@
+# Assignment 1
+
+### Question 2.2
+
+*Exploratory Data Analysis*
+
+```{r}
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+library(kernlab)
+```
+
+
+```{r}
+data <- read.table('../data 2.2/credit_card_data-headers.txt', header = TRUE, sep = "\t", dec = ".")
+data
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+my_plots = lapply(colnames(data), function(x){
+  p = ggplot(data) + aes_string(x)
+  
+  if(x %in% list("A1", "A9", "A10", "A12", "R1")){
+    p = p + geom_bar()
+  } else {
+    p = p + geom_density()
+  }
+})
+
+plot_grid(plotlist = my_plots)
+```
+
+**Correlation Matrix**
+
+```{r}
+cor_mat = round(cor(data), 2)
+cor_mat[upper.tri(cor_mat)] = NA
+melted_mat = melt(cor_mat)
+ggplot(data = melted_mat, aes(x=Var1, y=Var2, fill=value)) + geom_tile() + 
+  geom_text(aes(Var1, Var2, label=value), color="white", size=3)
+```
+*Modelling*
+
+```{r}
+# call ksvm.  Vanilladot is a simple linear kernel.
+model <- ksvm(as.matrix(data[,1:10]),data[,11],type="C-svc",kernel="vanilladot",C=0.015,scaled=TRUE)
+model
+```
+
+
+```{r}
+#predict using model
+ypred <- predict(model, as.matrix(data[,1:10]))
+table(data[,11], ypred)
+```
+
+```{r}
+### Accuracy function: Overall and in each class
+acc_func <- function(model) {
+   pred_all <- predict(model,org_cc_data[,1:10])
+   print (paste("Overall Acc:", round(sum(pred_all == org_cc_data[,11]) * 100 / nrow(org_cc_data),4)))
+   
+   pred_1 <- predict(model,org_cc_data[org_cc_data$R1 == 1,1:10])
+   print (paste("Acc in 1's:", round(sum(pred_1 == org_cc_data[org_cc_data$R1 == 1,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 1,1:10]),4)))
+   
+   pred_0 <- predict(model,org_cc_data[org_cc_data$R1 == 0,1:10])
+   print (paste("Acc in 0's:", round(sum(pred_0 == org_cc_data[org_cc_data$R1 == 0,11]) * 100 / nrow(org_cc_data[org_cc_data$R1 == 0,1:10]),4)))
+   
+   print(paste("#Support Vectors",model_v0@nSV))
+}
+```
+
+
+```{r}
+model_v0 = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 10)
+
+acc_func(model_v0)
+```
+
+```{r}
+C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03) #Range identified with hit and trial
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  acc_func(ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = C_i))
+  print("")
+}
+```
+
+
+**Hypertuning Parameters**
+
+```{r}
+#Variables not seeming significant -> A1, A12, A14, A15
+
+new_parameters = data[, c('A1', 'A2', 'A3', 'A8', 'A9', 'A10', 'A11', 'A12', 'A14', 'A15', 'R1')]
+head(new_parameters)
+
+```
+
+```{r}
+column_range = 1:10
+x_train = new_parameters[,column_range]
+
+
+model_v1 = ksvm(x=as.matrix(x_train), y=new_parameters[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C =0.0015)
+
+### Accuracy function: Overall and in each class
+acc_func <- function(model) {
+   pred_all <- predict(model, x_train)
+   print (paste("Overall Acc:", round(sum(pred_all == new_parameters[,11]) * 100 / nrow(new_parameters),4)))
+   
+   pred_1 <- predict(model,new_parameters[new_parameters$R1 == 1,column_range])
+   print (paste("Acc in 1's:", round(sum(pred_1 == new_parameters[new_parameters$R1 == 1,11]) * 100 / nrow(new_parameters[new_parameters$R1 == 1, column_range]),4)))
+
+   pred_0 <- predict(model,new_parameters[new_parameters$R1 == 0,column_range])
+   print (paste("Acc in 0's:", round(sum(pred_0 == new_parameters[new_parameters$R1 == 0,11]) * 100 / nrow(new_parameters[new_parameters$R1 == 0, column_range]),4)))
+   
+   print(paste("#Support Vectors",model_v1@nSV))
+}
+
+acc_func(model_v1)
+```
+
