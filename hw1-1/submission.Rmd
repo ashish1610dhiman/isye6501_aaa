@@ -58,6 +58,7 @@ library(cowplot)
 library(ggplot2)
 library(reshape2)
 library(kknn)
+library(pROC)
 ```
 
 #### Read Data and Summary
@@ -293,14 +294,14 @@ We implement vanilla knn model here, with rectangular kernel and majority voting
 
 ```{r}
 # Rectangular(unweighted) kernel as optimised 
-knn_pred <- vector(mode="list",length = dim(knn_data)[1])
+knn_pred <- vector(mode="list",length = dim(org_cc_data)[1])
 pred_table <- data.frame(k_val=numeric(0),acc_val=double(0)) #dataframe to hold accuracy with k
-for (k0 in seq(1,nrow(knn_data),by=25)){ #To loop over k values
-  for (i in 1:nrow(knn_data)){ #To loop over indvidual data points
-    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
-    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) #majority voting > 0.5
+for (k0 in seq(1,nrow(org_cc_data),by=25)){ #To loop over k values
+  for (i in 1:nrow(org_cc_data)){ #To loop over indvidual data points
+    knn_model_v0<-kknn(R1~.,train = org_cc_data[-i,],test = org_cc_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==org_cc_data$R1[i]) #majority voting > 0.5
   }
-  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(org_cc_data),digits =2)
   pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
 }
 plot(pred_table)
@@ -311,5 +312,68 @@ plot(pred_table)
 The graph above here plots Accuracy on y-axis vs 'k'. As we increase the k, Accuracy is mostly static and after a certain threshold, it starts dropping almost linearly to 55%, where it then stabilizes. The 55% number here is intuitive since with as many nearest neighbors as the #data points, the prediction decision basically boils down to assigning the majority label in the dataset, i.e. Negative. Therefore, for 55% the negative class, we receive a correct prediction while the rest 45% Positive class is misclassified.
 
 ### Optimisation over 'k' and probability threshold
+
+```{r, include=FALSE}
+# Threshold Function
+f0<-function(x,t=t0){
+  ifelse(x>t,1,0)
+}
+```
+
+```{r, include=FALSE}
+# Accuracy Function
+accuracy_knn <- function(df){
+  acc_overall = sum(df$act_class == df$pred_class)/nrow(df)
+  df_1 = df[df$act_class > 0,]
+  df_0 = df[df$act_class == 0,]
+  acc_1 = sum(df_1$act_class == df_1$pred_class)/nrow(df_1)
+  acc_0 = sum(df_0$act_class == df_0$pred_class)/nrow(df_0)
+  return (c(acc_overall, acc_1, acc_0))
+}
+```
+
+```{r, include=FALSE}
+# Data frame for storing values
+threshold_auc<-data.frame(k=double(0), threshold_val=double(0), auc_val=double(0), acc_overall=double(0), acc_1=double(0), acc_0=double(0))
+
+# Loop iterating over values of K for finding best value
+for(k in seq(20, 50, by=5)){
+  test_pred<-data.frame(pred_val=double(0),act_class=numeric(0))
+  for (i in 1:nrow(org_cc_data)){
+      knn_model_v1<-kknn(R1~., train = org_cc_data[-i,], test = org_cc_data[i,], k=k, kernel="rectangular", scale = TRUE)
+      knn_pred[i]<-as.double(fitted(knn_model_v1))
+      test_pred[nrow(test_pred)+1,]=c(knn_pred[i],org_cc_data$R1[i])
+  }
+
+  # Iteration over values of threshold to determine the threshold which maximizes AUC score and hence the better separation between the two classes
+  for(t0 in seq(0.2,0.8,by=0.02)){
+    test_pred$pred_class<-apply(data.frame(test_pred$pred_val),1,f0)
+    auc_val<-auc(test_pred$act_class,test_pred$pred_class)
+    print(auc_val)
+    print(c(k, t0, auc_val, accuracy_knn(test_pred)))
+    threshold_auc[nrow(threshold_auc)+1,]=c(k, t0,auc_val,accuracy_knn(test_pred)[1], accuracy_knn(test_pred)[2], accuracy_knn(test_pred)[3])
+  }
+}
+```
+
+```{r}
+threshold_auc
+```
+
+```{r}
+# Final step to determine the highest value of AUC for every K
+final_frame<-data.frame(k=double(0), threshold_val=double(0), auc_val=double(0), acc_overall=double(0), acc_1=double(0), acc_0=double(0))
+for(k_i in seq(20, 50, by=5)){
+  print(k_i)
+  data_i = threshold_auc[threshold_auc$k == k_i,]
+  print (data_i[which.max(data_i$auc_val),])
+  final_frame[nrow(final_frame)+1, ] <- data_i[which.max(data_i$auc_val),]
+}
+```
+
+```{r}
+final_frame
+```
+
 
 [**#Analysis:**]{style="color:red"}
