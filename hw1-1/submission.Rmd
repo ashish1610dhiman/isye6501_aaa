@@ -3,23 +3,24 @@ title: "Submission HW1"
 output:
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
-# Submission for HW1 \| ISYE 6501 \| Fall 22
+# ISYE 6501 \| Fall 22
 
 -   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
 
--   Abhinav Arun \|
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
 
--   Anshit Verma \|
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
 ## Question 2.1
 
-**Describe a situation or problem from your job, everyday life, current events, etc., for which a classification model would be appropriate. List some (up to 5) predictors that you might use.**
-
 ### Example 1: Credit Risk Evaluation
 
-Classification models find use cases across a spectrum of Credit Risk functions. A typical example being classifying a particular transaction as risky or otherwise basis which it is either declined or authorized. Here risk implies that the individual might not be able to make the required payments in the future, and therefore transactions made are riskier.
+Classification models find use cases across a spectrum of Credit Risk functions. A typical example is to a authorize or decline a transaction basis its classification as "risky" or not. Here "risky" implies that the individual might not be able to make the required payments in the future, and therefore transactions made are riskier.
 
 **Objective Function (**$Y$): To classify individual transactions as risky (decline) or not.\
 **Predictor Variables (**$X_i$): Some of the key predictor variables given below:
@@ -32,17 +33,31 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 
 -   ***Amount of Transaction***: This is the dollar amount of the transaction. Intuitively a transaction of \$20k is riskier than \$5, since even if the individual misses his payment, the hit taken by the firm is restricted to only \$5.
 
-## Question 2.2
+### Example 2: Readmission classification in Healthcare analytics
 
-**The files credit_card_data.txt (without headers) and credit_card_data-headers.txt (with headers) contain a dataset with 654 data points, 6 continuous and 4 binary predictor variables. It has anonymized credit card applications with a binary response variable (last column) indicating if the application was positive or negative.**
+An example of classification problem in Healthcare domain is the classification of whether a patient will get readmitted or not within 30 days of being discharged from a acute hospital setting. Having a good predictive model of the same can help us to curb the healthcare expenditure as the estimated average cost of readmission is more than \$10k.
+
+**Objective Function (**$Y$): To classify whether a readmission will happen within 30 days of the Inpatient discharge for a given patient.\
+**Predictor Variables (**$X_i$): Some of the key predictor variables given below:
+
+-   ***Length of stay*** : The period for which a patient stays in the Inpatient setting is a key predictor of readmission. A detailed analysis of the same shows that readmission probability is high for both low length of stay (when a patient is discharged earlier than expected without proper treatment) and even when length of stay is larger than a given threshold (because of patient acquiring healthcare associated infections over a prolonged period of stay).
+
+-   ***Discharge Disposition*** : The place where a patient is discharged also a good predictor of whether a person will get readmitted or not within 30 days .For some of the diagnosis categories , if a patient is discharged to home in place of a Post acute care setting , the readmission rate is higher.
+
+-   ***ED Utilization*** : The number of emergency department(ED) visits of a patient within a rolling 1 year is a good predictor of the risk profile of the patient and in turn it is a good predictor of whether a readmission will happen or not.
+
+-   ***\# of changes in medications/procedures*** : The number of medication changes is also a good variable for predicting readmission . Higher \# of medication changes during hospital stay is correlated with the occurence of a patient being readmitted.
+
+## Question 2.2
 
 ### Exploratory Data Analysis (EDA)
 
 ```{r}
-#imports
+#lib imports
 library(cowplot)
 library(ggplot2)
 library(reshape2)
+library(kknn)
 ```
 
 #### Read Data and Summary
@@ -54,11 +69,24 @@ head(org_cc_data)
 summary(org_cc_data)
 ```
 
-**A1,A9,A10,A12 are binary basis min/max values, rest are continuous**
+[**#Analysis:**]{style="color:red"}
 
-**For target variable mean is \~45% ==\> variable is not grossly imbalanced**
+A1,A9,A10,A12 are binary basis min/max values, rest are continuous
 
-#### Data Distribution and Co relation
+For target variable mean is \~45% ==\> variable is not grossly imbalanced
+
+```{r}
+org_cc_data1 = org_cc_data
+my_groups <- rep("Negative", nrow(org_cc_data))
+my_groups[org_cc_data$R > 0] <- "Positive"
+org_cc_data1$my_groups <- my_groups
+
+# ggp <- ggplot(org_cc_data1, aes(A3, fill = my_groups)) +  # Seprate density basis label
+#   geom_density(alpha=.34) #Make Transperent
+# ggp  
+```
+
+#### Data Distribution and Pairwise Corelation
 
 ```{r}
 ### Data Distribution
@@ -72,6 +100,24 @@ my_plots <- lapply(names(org_cc_data), function(var_x){
 
   } else {
     p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+### Seperate Distribution by class labels
+my_plots <- lapply(names(org_cc_data1[,1:11]), function(var_x){
+  p <-
+    ggplot(org_cc_data1[,1:11], aes(var_x, fill = my_groups)) + theme(legend.position="none") +
+    aes_string(var_x)
+  
+  if(var_x %in% list("A1","A9","A10","A12","R1")) {
+    p <- p + geom_bar()
+
+  }
+  else {
+    p <- p + geom_density(alpha=.34)
   } 
 
 })
@@ -92,21 +138,31 @@ geom_text(aes(Var1, Var2, label = value),
           color = "white", size = 3)
 ```
 
-**If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:**
+[**#Analysis:**]{style="color:red"}
 
--   R1: A8,A9,A10,A11
+-   [Distribution:]{.underline}
 
--   A11: A8,A9,A10
+    From variables distribution it is apparent that a few variables like A15 are highly skewed.
 
--   A10: A9
+-   [Distribution split basis Class:]{.underline}
 
--   A9: A8
+    Variables like A9 and A10 exhibit disparity in the label distribution, and hence we expect these variables to show up with stronger weights in SVM equation
 
--   A8: A2
+-   [Pairwise Corelation:]{.underline}
 
-## Question 2.2 (part 1)
+    If \|cor\| \> 0.3 ==\> Significant, then following pairs show high correlation:
 
-**Using the support vector machine function ksvm contained in the R package kernlab, find a good classifier for this data. Show the equation of your classifier, and how well it classifies the data points in the full data set. (Don't worry about test/validation data yet; we'll cover that topic soon.)**
+    -   R1: A8,A9,A10,A11 (We expect these to show up with high weights in SVM eqn.)
+
+    -   A11: A8,A9,A10
+
+    -   A10: A9
+
+    -   A9: A8
+
+    -   A8: A2
+
+## Question 2.2 (part 1: kSVM with Linear kernel)
 
 ```{r}
 #imports
@@ -140,16 +196,120 @@ acc_func(model_v0)
 print(paste("#Support Vectors",model_v0@nSV))
 ```
 
-### v1: Optimise C
+[**#Analysis:**]{style="color:red"}
+
+There are 190 support vectors, or roughly 30% of the total data points, which on first instance seems pretty large. It could be though that many points are in a close neighborhood and therefore a significant number of these points lie near the margin lines.
+
+### Model v1: Optimise C
 
 ```{r}
-C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03) #Range identified with hit and trial
+C_values <- c(0.0001,0.001,0.0015,0.002,0.005,0.01,0.03,0.1,0.5,1) #Range identified with hit and trial
 
 for (C_i in C_values) {
   print (paste("For C = ",C_i))
   acc_func(ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = C_i))
+  print(paste("#Support Vectors",model_v0@nSV))
   print("")
 }
 ```
 
-**C=0.015 seems the best option, because even with almost equal accuracy, the accuracy in the negative class is higher, where for other C values the accuracy amongst classes is more lopsided**
+[**#Analysis:**]{style="color:red"}
+
+With increasing C, we weight the cost function more towards mis-classification (relative to margin). Therefore intuitively increasing C, should increase Accuracy albeit at the cost of margin. And in the above data points too, similar effect is apparent, as Accuracy first increases and then plateaus.
+
+With Accuracy plateauing 86%, there are two viable C values:
+
+-   C=0.015: For this option provides the overall accuracy is 86% but accuracy in the negative class is higher, whereas for higher C values the accuracy among class groups is more lopsided
+
+-   C=0.001: While here the overall accuracy drops to 83% but accuracy in the negative class is significantly higher at 92%, and given this is a loan application example, it might be better to gear the model more towards the negative class.
+
+### Final SVM Model and it's equation
+
+```{r}
+modelf = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "vanilladot", C = 0.0015)
+acc_func(modelf)
+```
+
+The coefficients of SVM decision boundary is expressed as: $W = \sum_{i \in Supoort\ Vectors}(\alpha_i Y_i X_i)$
+
+```{r}
+a <- colSums(modelf@xmatrix[[1]] * modelf@coef[[1]])
+a0 <- -modelf@b
+sort(a)
+a0
+```
+
+[**#Analysis:**]{style="color:red"}
+
+As expected (from distribution plots) variables A9, A11, A8, A10 show very significant weights in the decision boundary. Similarly variables like A1,A2 have very low weights, and can also be dropped.
+
+## Question 2.2 (part 2: kSVM with Non Linear kernel)
+
+Non Linear kernels work by transposing the actual data into a higher dimensional space. Here we have tried two kernels, both of which transform data to the infinite dimension space.
+
+1.  Radial Basis, and
+
+2.  Laplace
+
+### Non Linear models: Radial Basis Kernel
+
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "rbfdot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```
+
+[**#Analysis:**]{style="color:red"}
+
+As seen for Linear Kernels, increase in C, increases accuracy while decreasing number of support vectors. Because this is a very complex model, we are able to get very high accuracy, however we can't be sure if the same would generalize to unseen data.
+
+### Non Linear models: Laplace Kernel
+
+```{r}
+C_values <- c(0.01,1,10,50,100,1000,2000)
+
+for (C_i in C_values) {
+  print (paste("For C = ",C_i))
+  modeli = ksvm(x=as.matrix(org_cc_data[,1:10]), y=org_cc_data[,11], scaled =TRUE, type = "C-svc",kernel = "laplacedot", C = C_i)
+  acc_func(modeli)
+  print(modeli@nSV)
+}
+```
+
+[**#Analysis:**]{style="color:red"}
+
+Here again we are able to get 100 accuracy, however we can't be sure if the same would generalize to unseen data.
+
+## Question 2.3 (knn Model)
+
+### Vanilla knn model
+
+We implement vanilla knn model here, with rectangular kernel and majority voting (i.e probability threshold \>0.5) among neighbors to decide predicted label.
+
+```{r}
+# Rectangular(unweighted) kernel as optimised 
+knn_pred <- vector(mode="list",length = dim(knn_data)[1])
+pred_table <- data.frame(k_val=numeric(0),acc_val=double(0)) #dataframe to hold accuracy with k
+for (k0 in seq(1,nrow(knn_data),by=25)){ #To loop over k values
+  for (i in 1:nrow(knn_data)){ #To loop over indvidual data points
+    knn_model_v0<-kknn(R1~.,train = knn_data[-i,],test = knn_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+    knn_pred[i]<-as.integer(round(fitted(knn_model_v0),digits = 0)==knn_data$R1[i]) #majority voting > 0.5
+  }
+  percent_accuracy<-round(as.double(sum(unlist(knn_pred)))/nrow(knn_data),digits =2)
+  pred_table[nrow(pred_table)+1,]=c(k0,percent_accuracy)
+}
+plot(pred_table)
+```
+
+[**#Analysis:**]{style="color:red"}
+
+The graph above here plots Accuracy on y-axis vs 'k'. As we increase the k, Accuracy is mostly static and after a certain threshold, it starts dropping almost linearly to 55%, where it then stabilizes. The 55% number here is intuitive since with as many nearest neighbors as the #data points, the prediction decision basically boils down to assigning the majority label in the dataset, i.e. Negative. Therefore, for 55% the negative class, we receive a correct prediction while the rest 45% Positive class is misclassified.
+
+### Optimisation over 'k' and probability threshold
+
+[**#Analysis:**]{style="color:red"}
