@@ -29,7 +29,7 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 
 -   ***Credit Utilization***: Credit Utilization is defined as the ratio of current balance to overall credit limit accorded to the individual. Suppose a individual has a credit line of \$10,000 and he already has utilized \$ 9k of it. This individual is generally prone to more risk as compared to the individual who only has utilized say \$ 2k of his \$ 10k line.
 
--   ***Current Debt to Income ratio***: This is a measure of Income to Debt Capacity of the individual. In other words, it stacks up the overall debt obligations of the individual across mortgage, auto loan, credit cards etc., against his total income. If a larger part of an individual's income is directed towards his debt payment, than he/she again might be more susceptible to miss payments in the future and hence is riskier.
+-   ***Current Debt to Income ratio***: This is a measure of Debt to Income Capacity of the individual. In other words, it stacks up the overall debt obligations of the individual across mortgage, auto loan, credit cards etc., against his total income. If a larger part of an individual's income is directed towards his debt payment, than he/she again might be more susceptible to miss payments in the future and hence is riskier.
 
 -   ***Amount of Transaction***: This is the dollar amount of the transaction. Intuitively a transaction of \$20k is riskier than \$5, since even if the individual misses his payment, the hit taken by the firm is restricted to only \$5.
 
@@ -37,7 +37,7 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 
 An example of classification problem in Healthcare domain is the classification of whether a patient will get readmitted or not within 30 days of being discharged from a acute hospital setting. Having a good predictive model of the same can help us to curb the healthcare expenditure as the estimated average cost of readmission is more than \$10k.
 
-**Objective Function (**$Y$): To classify whether a readmission will happen within 30 days of the Inpatient discharge for a given patient.\
+**Objective Function (**$Y$): To classify whether a readmission will happen within 30 days of the Inpatient (Hospital) discharge for a given patient.\
 **Predictor Variables (**$X_i$): Some of the key predictor variables given below:
 
 -   ***Length of stay*** : The period for which a patient stays in the Inpatient setting is a key predictor of readmission. A detailed analysis of the same shows that readmission probability is high for both low length of stay (when a patient is discharged earlier than expected without proper treatment) and even when length of stay is larger than a given threshold (because of patient acquiring healthcare associated infections over a prolonged period of stay).
@@ -52,7 +52,7 @@ An example of classification problem in Healthcare domain is the classification 
 
 ### Exploratory Data Analysis (EDA)
 
-```{r}
+```{r, include=FALSE}
 #lib imports
 library(cowplot)
 library(ggplot2)
@@ -222,7 +222,7 @@ With Accuracy plateauing 86%, there are two viable C values:
 
 -   C=0.015: For this option provides the overall accuracy is 86% but accuracy in the negative class is higher, whereas for higher C values the accuracy among class groups is more lopsided
 
--   C=0.001: While here the overall accuracy drops to 83% but accuracy in the negative class is significantly higher at 92%, and given this is a loan application example, it might be better to gear the model more towards the negative class.
+-   C=0.001: While here the overall accuracy drops to 83% but accuracy in the negative class is significantly higher at 92%, and given this is a loan application example, it might be better to gear the model more towards the negative class. This is because it might be more riskier to approve the loan application for a person who ought to be denied the loan application versus misclassifying an otherwise approved applicant.
 
 ### Final SVM Model and it's equation
 
@@ -242,7 +242,7 @@ a0
 
 [**#Analysis:**]{style="color:red"}
 
-As expected (from distribution plots) variables A9, A11, A8, A10 show very significant weights in the decision boundary. Similarly variables like A1,A2 have very low weights, and can also be dropped.
+**As expected (from distribution plots) variables A9, A11, A8, A10 show very significant weights in the decision boundary. Similarly variables like A1,A2 have very low weights, and can also be dropped.**
 
 ## Question 2.2 (part 2: kSVM with Non Linear kernel)
 
@@ -267,7 +267,7 @@ for (C_i in C_values) {
 
 [**#Analysis:**]{style="color:red"}
 
-As seen for Linear Kernels, increase in C, increases accuracy while decreasing number of support vectors. Because this is a very complex model, we are able to get very high accuracy, however we can't be sure if the same would generalize to unseen data.
+As seen for Linear Kernels, increase in C, increases accuracy while decreasing number of support vectors. Because this is a very complex model, we are able to get very high accuracy on the training data, however we can't be sure if the same would generalize to unseen data.
 
 ### Non Linear models: Laplace Kernel
 
@@ -284,13 +284,13 @@ for (C_i in C_values) {
 
 [**#Analysis:**]{style="color:red"}
 
-Here again we are able to get 100 accuracy, however we can't be sure if the same would generalize to unseen data.
+Here again we are able to get 100 accuracy (it appears as if it is grossly overfitting), hence we can't be sure if the same performance would generalize to unseen data.
 
 ## Question 2.3 (knn Model)
 
 ### Vanilla knn model
 
-We implement vanilla knn model here, with rectangular kernel and majority voting (i.e probability threshold \>0.5) among neighbors to decide predicted label.
+We implement vanilla knn model here, with rectangular (standard unweighted) kernel and majority voting (i.e probability threshold \>0.5) among neighbors to decide predicted label.
 
 ```{r}
 # Rectangular(unweighted) kernel as optimised 
@@ -309,9 +309,17 @@ plot(pred_table)
 
 [**#Analysis:**]{style="color:red"}
 
-The graph above here plots Accuracy on y-axis vs 'k'. As we increase the k, Accuracy is mostly static and after a certain threshold, it starts dropping almost linearly to 55%, where it then stabilizes. The 55% number here is intuitive since with as many nearest neighbors as the #data points, the prediction decision basically boils down to assigning the majority label in the dataset, i.e. Negative. Therefore, for 55% the negative class, we receive a correct prediction while the rest 45% Positive class is misclassified.
+The plot above shows the Accuracy on y-axis vs 'k' i.e number of nearest neighbours on the x-axis. As we increase k, Accuracy is mostly static and after a certain threshold (~340), it starts dropping almost linearly to 55%, where it then stabilizes. The 55% number here is intuitive since with as many nearest neighbors as the #data points, the prediction decision basically boils down to assigning the majority label in the dataset, i.e. Negative. 
+
+**At this point, we receive a correct prediction on the negative class which constitute around 55% of the overall number of data points, while the rest 45% Positive class is misclassified.**
 
 ### Optimisation over 'k' and probability threshold
+The KNN model as compared to SVM model provides us the prediction probability of each point being in a given class which can then be transformed into predicted labels based on the threshold value.
+This introduces the notion of deciding an optimal threshold value that maximizes our chosen metric. A typically used metric for classification problem is the AUC value under the ROC curve.
+
+https://en.wikipedia.org/wiki/Receiver_operating_characteristic
+
+In the code below , we have employed an approach of iterating over k and finding an optimal probability threshold corresponding to each k which maximizes the AUC score.
 
 ```{r, include=FALSE}
 # Threshold Function
@@ -364,9 +372,9 @@ threshold_auc
 # Final step to determine the highest value of AUC for every K
 final_frame<-data.frame(k=double(0), threshold_val=double(0), auc_val=double(0), acc_overall=double(0), acc_1=double(0), acc_0=double(0))
 for(k_i in seq(20, 50, by=5)){
-  print(k_i)
+  #print(paste("Best Probability threshold for k=",k_i))
   data_i = threshold_auc[threshold_auc$k == k_i,]
-  print (data_i[which.max(data_i$auc_val),])
+  #print (data_i[which.max(data_i$auc_val),])
   final_frame[nrow(final_frame)+1, ] <- data_i[which.max(data_i$auc_val),]
 }
 ```
@@ -375,5 +383,6 @@ for(k_i in seq(20, 50, by=5)){
 final_frame
 ```
 
-
 [**#Analysis:**]{style="color:red"}
+From above table we are able to choose a combination of k and threshold values, so as to maximize accuracy.
+However, the combinations listed above exhibit very similar Accuracy ranges (overall and split by classes as well.) 
