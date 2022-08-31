@@ -33,6 +33,21 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 
 -   ***Amount of Transaction***: This is the dollar amount of the transaction. Intuitively a transaction of \$20k is riskier than \$5, since even if the individual misses his payment, the hit taken by the firm is restricted to only \$5.
 
+### Example 2: Readmission classification in Healthcare analytics
+
+An example of classification problem in Healthcare domain is the classification of whether a patient will get readmitted or not within 30 days of being discharged from a acute hospital setting. Having a good predictive model of the same can help us to curb the healthcare expenditure as the estimated average cost of readmission is more than \$10k.
+
+**Objective Function (**$Y$): To classify whether a readmission will happen within 30 days of the Inpatient discharge for a given patient.\
+**Predictor Variables (**$X_i$): Some of the key predictor variables given below:
+
+-   ***Length of stay*** : The period for which a patient stays in the Inpatient setting is a key predictor of readmission. A detailed analysis of the same shows that readmission probability is high for both low length of stay (when a patient is discharged earlier than expected without proper treatment) and even when length of stay is larger than a given threshold (because of patient acquiring healthcare associated infections over a prolonged period of stay).
+
+-   ***Discharge Disposition*** : The place where a patient is discharged also a good predictor of whether a person will get readmitted or not within 30 days .For some of the diagnosis categories , if a patient is discharged to home in place of a Post acute care setting , the readmission rate is higher.
+
+-   ***ED Utilization*** : The number of emergency department(ED) visits of a patient within a rolling 1 year is a good predictor of the risk profile of the patient and in turn it is a good predictor of whether a readmission will happen or not.
+
+-   ***\# of changes in medications/procedures*** : The number of medication changes is also a good variable for predicting readmission . Higher \# of medication changes during hospital stay is correlated with the occurence of a patient being readmitted.
+
 ## Question 2.2
 
 ### Exploratory Data Analysis (EDA)
@@ -42,6 +57,7 @@ Classification models find use cases across a spectrum of Credit Risk functions.
 library(cowplot)
 library(ggplot2)
 library(reshape2)
+library(kknn)
 ```
 
 #### Read Data and Summary
@@ -270,3 +286,5 @@ for (C_i in C_values) {
 Here again we are able to get 100 accuracy, however we can't be sure if the same would generalize to unseen data.
 
 ## Question 2.3 (knn Model)
+
+### 
