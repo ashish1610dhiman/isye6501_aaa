@@ -9,7 +9,7 @@ date: "2022-09-04"
 library(ggplot2)
 library(cowplot)
 library(reshape2)
-# library(factoextra)
+library(factoextra)
 ```
 
 ## Question 3.1
@@ -68,7 +68,7 @@ ggplot(melted_mat, aes(x=Var1, y=Var2, fill=value)) +
 # Calculation of best 'K'
 elbow_graph_data <- data.frame(K=integer(), sum_of_square=double())
 for(k in seq(1, 10, by=1)){
-  km.res <- kmeans(as.matrix(iris_data[,1:4]), k, nstart = 25)
+  km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
   elbow_graph_data[nrow(elbow_graph_data) + 1, ] = c(k, km.res$tot.withinss)
 }
 ```
@@ -89,17 +89,98 @@ best_km
 ```
 
 ```{r}
+cm <- table(iris_data$Species, best_km$cluster)
+cm
+```
+
+```{r}
+best_km$centers
+```
+
+
+```{r}
 # renaming predicted clusters according to categorical response variable
-renamed_clusters <- c("versicolor", "setosa", "virginica")[best_km$cluster]
+# renamed_clusters <- c("versicolor", "setosa", "virginica")[best_km$cluster]
 ```
 
 ```{r}
 kmeans_basic_table <- data.frame(best_km$size, best_km$centers)
-kmeans_basic_df <- data.frame(actual_value=iris_data[,5], prediction=renamed_clusters)
+kmeans_basic_table
+```
+
+
+```{r}
+kmeans_basic_df <- data.frame(actual_value=iris_data[,5], prediction=best_km$cluster)
+kmeans_basic_df
+```
+
+
+```{r}
+plot(scale(iris_data[,1:4]), col=best_km$cluster)
 ```
 
 ```{r}
-kmeans_basic_table
+# prediction_accuracy <- round(sum(kmeans_basic_df$actual_value == kmeans_basic_df$prediction) / nrow(kmeans_basic_df) * 100, 2)
+# print(paste('Accuracy Acheived ->', prediction_accuracy, '%' ))
+```
+
+
+### Plotting Clusters
+
+```{r}
+fviz_cluster(best_km, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
+```
+***Analysing For K=4***
+
+```{r}
+alt_kmeans <- kmeans(as.matrix(scale(iris_data[,1:4])), 4, nstart = 25)
+alt_kmeans
+```
+
+```{r}
+cm <- table(iris_data$Species, alt_kmeans$cluster)
+cm
+```
+
+```{r}
+alt_kmeans$centers
+```
+
+```{r}
+alt_kmeans_table_size_v_centers <- data.frame(alt_kmeans$size, alt_kmeans$centers)
+alt_kmeans_table_size_v_centers
+```
+
+
+```{r}
+alt_kmeans_row_pred <- data.frame(actual_value=iris_data[,5], prediction=alt_kmeans$cluster)
+alt_kmeans_row_pred
+```
+
+```{r}
+# clusters = data.frame(alt_kmeans$cluster)
+# clusters[clusters$alt_kmeans.cluster==4,]
+mapped_data <- data.frame(iris_data[,1:4], prediction=alt_kmeans$cluster)
+```
+
+```{r}
+# Summary for Cluster 1
+summary(mapped_data[mapped_data$prediction==1,1:4])
+```
+
+```{r}
+# Summary for Cluster 2
+summary(mapped_data[mapped_data$prediction==2,1:4])
+```
+
+```{r}
+# Summary for Cluster 3
+summary(mapped_data[mapped_data$prediction==3,1:4])
+```
+
+```{r}
+# Summary for Cluster 4
+summary(mapped_data[mapped_data$prediction==4,1:4])
 ```
 
 ```{r}
@@ -107,7 +188,6 @@ plot(scale(iris_data[,1:4]), col=best_km$cluster)
 ```
 
 ```{r}
-prediction_accuracy <- round(sum(kmeans_basic_df$actual_value == kmeans_basic_df$prediction) / nrow(kmeans_basic_df) * 100, 2)
-print(paste('Accuracy Acheived ->', prediction_accuracy, '%' ))
+fviz_cluster(best_km, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
 ```
 
