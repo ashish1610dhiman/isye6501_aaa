@@ -1,0 +1,113 @@
+---
+title: "Homework_2"
+output: html_document
+date: "2022-09-04"
+---
+
+```{r}
+# imports
+library(ggplot2)
+library(cowplot)
+library(reshape2)
+# library(factoextra)
+```
+
+## Question 3.1
+
+```{r}
+cc_data = read.table('./data 3.1/credit_card_data-headers.txt', header = TRUE, sep='', dec='.')
+head(cc_data)
+dim(cc_data)
+```
+
+## Question 4.2
+
+```{r}
+iris_data = read.table('./iris.txt', header = TRUE, sep='', dec='.')
+head(iris_data)
+dim(iris_data)
+```
+
+### Exploratory Data Analysis
+
+```{r}
+summary(iris_data)
+```
+
+```{r}
+table(iris_data$Species)
+```
+
+
+```{r}
+# Density Plots
+my_plots = lapply(colnames(iris_data), function(x){
+  p = ggplot(iris_data) + aes_string(x)
+  if(x=='Species') {
+    p = p + geom_bar()
+  }
+  else {
+    p = p + geom_density()
+  }
+})
+
+plot_grid(plotlist = my_plots)
+```
+
+```{r}
+# Correlation Matrix
+cor_mat = round(cor(iris_data[,1:4]), 2)
+melted_mat = melt(cor_mat)
+ggplot(melted_mat, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() + geom_text(aes(Var1, Var2, label=value), color='white', size=3)
+```
+
+### Modelling
+
+```{r}
+# Calculation of best 'K'
+elbow_graph_data <- data.frame(K=integer(), sum_of_square=double())
+for(k in seq(1, 10, by=1)){
+  km.res <- kmeans(as.matrix(iris_data[,1:4]), k, nstart = 25)
+  elbow_graph_data[nrow(elbow_graph_data) + 1, ] = c(k, km.res$tot.withinss)
+}
+```
+
+```{r}
+elbow_graph_data
+```
+
+```{r}
+plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow Graph', )
+```
+
+Best K is 3 because we are getting marginal benefit after that
+
+```{r}
+best_km <- kmeans(as.matrix(scale(iris_data[,1:4])), 3, nstart = 25)
+best_km
+```
+
+```{r}
+# renaming predicted clusters according to categorical response variable
+renamed_clusters <- c("versicolor", "setosa", "virginica")[best_km$cluster]
+```
+
+```{r}
+kmeans_basic_table <- data.frame(best_km$size, best_km$centers)
+kmeans_basic_df <- data.frame(actual_value=iris_data[,5], prediction=renamed_clusters)
+```
+
+```{r}
+kmeans_basic_table
+```
+
+```{r}
+plot(scale(iris_data[,1:4]), col=best_km$cluster)
+```
+
+```{r}
+prediction_accuracy <- round(sum(kmeans_basic_df$actual_value == kmeans_basic_df$prediction) / nrow(kmeans_basic_df) * 100, 2)
+print(paste('Accuracy Acheived ->', prediction_accuracy, '%' ))
+```
+
