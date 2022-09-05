@@ -1,0 +1,13 @@
+---
+title: "Homework_2_Submission"
+output: html_document
+date: "2022-09-04"
+---
+
+```{r}
+# imports
+library(ggplot2)
+library(cowplot)
+library(reshape2)
+library(factoextra)
+```

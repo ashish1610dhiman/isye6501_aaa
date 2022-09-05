@@ -138,10 +138,10 @@ mean(unlist(cv_accuracy))
 
 ```{r, include = FALSE}
 #Iterate over k and get mean test
-acc_df <- data.frame(matrix(ncol = 0, nrow = length(seq(3,25,2))))
-acc_df$k_kknn = seq(3,25,2)
-mean_cv_acc_k = lapply(seq(3,25,2), function(x) mean(unlist(cv_function(df = df_copy,x))))
-min_cv_acc_k = lapply(seq(3,25,2), function(x) min(unlist(cv_function(df = df_copy,x))))
+acc_df <- data.frame(matrix(ncol = 0, nrow = length(seq(3,101,2))))
+acc_df$k_kknn = seq(3,101,2)
+mean_cv_acc_k = lapply(seq(3,101,2), function(x) mean(unlist(cv_function(df = df_copy,x))))
+min_cv_acc_k = lapply(seq(3,101,2), function(x) min(unlist(cv_function(df = df_copy,x))))
 acc_df$mean_cv_accuracy = unlist(mean_cv_acc_k)
 acc_df$min_cv_accuracy = unlist(min_cv_acc_k)
 #mean(unlist(cv_accuracy))
@@ -149,4 +149,11 @@ acc_df$min_cv_accuracy = unlist(min_cv_acc_k)
 
 ```{r}
 acc_df
+```
+
+```{r}
+ggplot(data = acc_df, aes(x = k_kknn, y = mean_cv_accuracy)) +
+  geom_line() +geom_point() +
+  geom_vline(xintercept = acc_df[which.max(acc_df$mean_cv_accuracy),1],
+             color ="magenta", size = 1.5, alpha = 0.5)
 ```
