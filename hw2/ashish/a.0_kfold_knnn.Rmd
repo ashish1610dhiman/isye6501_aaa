@@ -1,0 +1,152 @@
+---
+title: "ques 3.1"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r, include=FALSE}
+setwd("~/data_projects/fall22_hw/isye6501_aaa/hw2/ashish")
+
+
+#lib imports
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+library(kknn)
+library(pROC)
+```
+
+### Read Data and repeat vanilla knnn model from last time
+
+```{r}
+org_cc_data <- read.table(file = '../data 3.1/credit_card_data-headers.txt', sep = "\t", header = TRUE)
+dim(org_cc_data)
+```
+
+```{r}
+#predict ith row of dataframe
+predcit_i = function(i =1, k0 = 5){
+  model = kknn(R1~.,train = org_cc_data[-i,],test = org_cc_data[i,],k=k0,kernel="rectangular",scale = TRUE)
+  return (fitted(model))
+  #return (as.integer(fitted(model) > threshold))
+}
+
+#predictions for a given k
+predcit_k = function(k0 = 5){
+  predictions = lapply(seq(1,nrow(org_cc_data)),predcit_i, k0)
+  return (predictions)
+}
+
+#precit probabilities for specific k
+pred_prob <- predcit_k(k0=5)
+
+# decide best threshold
+best_threshold = function(pred_prob, df_test=org_cc_data){
+  myroc <- roc(df_test$R1,as.numeric(unlist(pred_prob)), smooth=FALSE)
+  print(paste("AUC is",auc(myroc)))
+  #plot(myroc, auc.polygon=TRUE)
+  return (coords(myroc,x="best")["threshold"][[1]])
+}
+
+ti = best_threshold(pred_prob)
+print (ti)
+#Accuracy for best threshold
+acc_func = function(y_act, pred_probs, thresh = 0.5){
+  y_pred = lapply(pred_probs, function(x) if(x>=thresh) 1 else 0)
+  y_pred = as.numeric(unlist(y_pred))
+  acc_overall = sum(y_act == y_pred)/length(y_act)
+  acc_overall = round(acc_overall,4)* 100
+  return (acc_overall)
+}
+
+acc_func(y_act = org_cc_data$R1, pred_probs = pred_prob, thresh = ti)
+acc_func(y_act = org_cc_data$R1, pred_probs = pred_prob, thresh = 0.9)
+```
+
+```{r}
+master_kknn_func = function(y_act = org_cc_data$R1, ki = 10){
+  pred_prob <- predcit_k(k0=ki)
+  ti = best_threshold(pred_prob)
+  print (paste("Best threshold",ti))
+  return (acc_func(y_act = y_act, pred_probs = pred_prob, thresh = ti))
+}
+
+master_kknn_func(ki = 5)
+master_kknn_func(ki = 7)
+master_kknn_func(ki = 10)
+```
+
+## Cross validation for kknn
+
+-   Split data into 5 parts
+
+    -   Keep first 4 for train, last 1 for validation
+
+    -   On the train, obtain k values of nearest neighbors for max auc
+
+    -   get acc on train and test
+
+```{r}
+#Split org_data into 5 parts
+df_copy = org_cc_data
+df_copy$cross_validation_i <- sample(5, size = nrow(df_copy), replace = TRUE)
+
+aggregate(df_copy$R1,list(df_copy$cross_validation_i), FUN = mean)
+```
+
+```{r}
+#Function to train model and return prediction on test
+train_test_i = function(df_train,df_test, k0 = 5){
+  model = kknn(R1~.,train = df_train,test = df_test,k=k0,kernel="rectangular",scale = TRUE)
+  return (fitted(model))
+}
+
+#Train test for one group
+cv_function_i = function(df= df_copy, test_index_choice,k_choice){
+  print(test_index_choice)
+  #split data into train and test
+  mask_test_i = df$cross_validation_i == test_index_choice
+  df_train = df[!mask_test_i,]
+  df_test = df[mask_test_i,]
+  print (paste("Train,Test Size =",nrow(df_train),nrow(df_test)))
+  #train and get probaility predictions on test model
+  test_probabilities = train_test_i(df_train,df_test, k0 = k_choice)
+  
+  #get best threshold for test probabilities
+  ti = best_threshold(test_probabilities, df_test = df_test)
+  print (paste("Best threshold is",ti))
+  #get test accuracy
+  y_act = df_test$R1
+  #print (paste("Length of Test Probabilities",nrow(df_test),length(test_probabilities)))
+  return (acc_func(y_act = y_act, pred_probs = test_probabilities, thresh = ti))
+}
+
+#CV function: pass k, return test accuracy for all folds
+cv_function = function(df = df_copy,k_choice = 5){
+  cv_accuracy = lapply(seq(1,5), function(x) cv_function_i(df=df_copy,x,k_choice))
+}
+```
+
+```{r}
+cv_accuracy = cv_function(df = df_copy,k_choice = 5)
+mean(unlist(cv_accuracy))
+```
+
+## Iterate on different models and use CV for best model
+
+```{r, include = FALSE}
+#Iterate over k and get mean test
+acc_df <- data.frame(matrix(ncol = 0, nrow = length(seq(3,25,2))))
+acc_df$k_kknn = seq(3,25,2)
+mean_cv_acc_k = lapply(seq(3,25,2), function(x) mean(unlist(cv_function(df = df_copy,x))))
+min_cv_acc_k = lapply(seq(3,25,2), function(x) min(unlist(cv_function(df = df_copy,x))))
+acc_df$mean_cv_accuracy = unlist(mean_cv_acc_k)
+acc_df$min_cv_accuracy = unlist(min_cv_acc_k)
+#mean(unlist(cv_accuracy))
+```
+
+```{r}
+acc_df
+```
