@@ -1,13 +1,290 @@
 ---
-title: "Homework_2_Submission"
-output: html_document
+title: "ISYE 6501 | Submission HW2"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
 date: "2022-09-04"
 ---
 
-```{r}
+# ISYE 6501 \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
+
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+```{r, include=FALSE}
+
+set.seed(61)
+
 # imports
 library(ggplot2)
 library(cowplot)
 library(reshape2)
-library(factoextra)
+#library(factoextra)
+library(kknn)
+library(pROC)
 ```
+
+## Read Data
+
+```{r}
+org_cc_data <- read.table(file = './data 3.1/credit_card_data-headers.txt', sep = "\t", header = TRUE)
+dim(org_cc_data)
+```
+
+## Question 3.1
+
+### Part 1: Cross Validation for finding best knnn model
+
+Here we perform 5 fold cross validation, and follow the following pseudo code:
+
+1.  Divide the data into 5 equal parts
+
+2.  Choose i'th part as test data and train knn on the rest 4
+
+    1.  Find the threshold which maximises AUC using ROC curve
+
+    2.  With this optimal threshold find accuracy on test set
+
+3.  Repeat step 2 but slide i to the next part
+
+4.  When all parts are rotated into test set, calculate the measure for accuracy of model:
+
+    1.  Mean test accuracy across 5 folds
+
+    2.  Min test accuracy across the 5 folds
+
+**We repeat the above 4 steps for different k values, to find the best model(or choice of k)**
+
+### Step 1:
+
+```{r}
+#Split org_data into 5 parts
+df_copy = org_cc_data
+df_copy$cross_validation_i <- sample(5, size = nrow(df_copy), replace = TRUE)
+
+summary_df = aggregate(df_copy$R1,list(df_copy$cross_validation_i), 
+          FUN = function(x) c(mean = mean(x), proportion = length(x)/nrow(df_copy)))
+print.data.frame(summary_df)
+```
+
+[**#Analysis**]{style="color:red"}
+
+The above summary shows the mean of R1 and relative size of each fold. Ideally for all the folds this should be 45% mean and 20%, but we see minor deviations due to random sampling.
+
+```{r}
+#Function to train model and return prediction on test
+train_test_i = function(df_train,df_test, k0 = 5){
+  f = R1~A1+A2+A3+A8+A9+A10+A11+A12+A14+A15
+  model = kknn(f,train = df_train,test = df_test,k=k0,kernel="rectangular",scale = TRUE)
+  return (fitted(model))
+}
+```
+
+### Step 2
+
+```{r}
+#Train model and test on ith group
+cv_function_i = function(df, test_index_choice,k_choice){
+  print("")
+  print (paste("test index for CV Fold",test_index_choice))
+  #split data into train and test
+  mask_test_i = df$cross_validation_i == test_index_choice
+  df_train = df[!mask_test_i,]
+  df_test = df[mask_test_i,]
+  print (paste("Train,Test Size =",nrow(df_train),nrow(df_test)))
+  #train and get probaility predictions on test model
+  test_probabilities = train_test_i(df_train,df_test, k0 = k_choice)
+  
+  #get best threshold for test probabilities
+  ti = best_threshold(test_probabilities, df_test = df_test)
+  if (length(ti) >1){
+    ti = ti[[1]] #select 1st when there are multiple optimal thresholds
+  }
+  print (paste("Best threshold is",ti))
+  #get test accuracy
+  y_act = df_test$R1
+  #print (paste("Length of Test Probabilities",nrow(df_test),length(test_probabilities)))
+  return (acc_func(y_act = y_act, pred_probs = test_probabilities, thresh = ti))
+}
+```
+
+```{r}
+#Test fucntion with a sample i
+cv_function_i(df = df_copy, test_index_choice = 1, k_choice = 16)
+```
+
+### Step 3
+
+```{r}
+#CV function: pass k, return test accuracy for all folds
+cv_function = function(df = df_copy,k_choice = 5){
+  print("----------------------------------------------")
+  print(paste("For k value",k_choice))
+  cv_accuracy = lapply(seq(1,5), function(x) cv_function_i(df=df_copy,x,k_choice))
+  print("----------------------------------------------")
+  return (cv_accuracy)
+}
+```
+
+```{r}
+#Test function with a sample k
+cv_accuracy = cv_function(df = df_copy,k_choice = 16)
+```
+
+```{r}
+unlist(cv_accuracy)
+mean(unlist(cv_accuracy))
+```
+
+The values match the above test run values
+
+### Step 4: Iterate on different models and use CV for best model
+
+```{r, include=FALSE}
+#Iterate over k and get mean test accuracy
+
+end_k = 77 #half of test set size
+
+acc_df <- data.frame(matrix(ncol = 0, nrow = length(seq(3,end_k,2))))
+acc_df$k_kknn = seq(3,end_k,2)
+mean_cv_acc_k = lapply(seq(3,end_k,2), function(x) mean(unlist(cv_function(df = df_copy,x))))
+min_cv_acc_k = lapply(seq(3,end_k,2), function(x) min(unlist(cv_function(df = df_copy,x))))
+sd_cv_acc_k = lapply(seq(3,end_k,2), function(x) sd(unlist(cv_function(df = df_copy,x))))
+acc_df$mean_cv_accuracy = unlist(mean_cv_acc_k)
+acc_df$min_cv_accuracy = unlist(min_cv_acc_k)
+acc_df$sd_cv_accuracy = unlist(sd_cv_acc_k)
+```
+
+```{r}
+acc_df
+```
+
+[**#Analysis**]{style="color:red"}
+
+The above dataframe has average CV accuracy, min CV accuracy and Std. Deviation of Accuracy for each k value tried. While average CV Accuracy is a typical performance measure, we have also retained min CV accuracy which is like a lower bound on the performance of models across various validation sets, and we can also use max of this min bound to find optimal k.
+
+We have also kept standard deviation, such that we can able to infer the variance of accuracy across cross folds. This is helpful because the maximum CV accuracy for different values across k, varies within a percent (See graph below).
+
+#### Plot the accuracy with k, and find optimal k which maximizes accuracy
+
+```{r}
+ggplot(data = acc_df, aes(x = k_kknn, y = mean_cv_accuracy)) +
+  geom_line() +geom_point() +
+  geom_vline(xintercept = acc_df[which.max(acc_df$mean_cv_accuracy),1],
+             color ="magenta", size = 1.5, alpha = 0.5) +
+  ggtitle(paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]))
+
+print (paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]))
+```
+
+[**#Analysis**]{style="color:red"}
+
+Here we see that for k = 47, we get maximum average CV accuracy of 87.74%.
+
+However, as noted above the nuance to note her is that, for k \> 30, that accuracy mostly oscillates at almost the same range with delta of 0.5. But since the standard deviation of max accuracy among cross folds is 2.45 itself, this choice of k becomes a little tricky. In other words, we
+
+Another effect to note here is that, this optimal value of k, is also subject to the random sampling done to create the folds, and will change with a different random seed setting.
+
+```{r}
+acc_df[which.max(acc_df$mean_cv_accuracy),]
+```
+
+## Question 3.1
+
+### Part 2: Train, Validation and Test on knnn
+
+```{r}
+#split data into 70% train, 15% validation and 15% test
+df_copy2 = org_cc_data
+df_copy2$split_i <- sample(100, size = nrow(df_copy), replace = TRUE)
+
+df_copy2$split = "train"
+df_copy2$split[70 < df_copy2$split_i] = "valid"
+df_copy2$split[85 < df_copy2$split_i] = "test"
+
+summary_df = aggregate(df_copy2$R1,list(df_copy2$split), 
+          FUN = function(x) c(mean = mean(x), proportion = length(x)/nrow(df_copy2)))
+print.data.frame(summary_df)
+```
+
+Again slight deviation from expected values is seen due to random effects
+
+```{r}
+df_train = df_copy2[df_copy2$split=="train",]
+dim(df_train)
+df_valid = df_copy2[df_copy2$split=="valid",]
+dim(df_valid)
+df_test= df_copy2[df_copy2$split=="test",]
+dim(df_test)
+```
+
+### Find optimal k using training on train and validation
+
+```{r}
+train_valid_func = function(df_train, df_test, k_choice){
+  print (paste("For k=",k_choice))
+  #split data into train and test
+  print (paste("Train,Test Size =",nrow(df_train),nrow(df_test)))
+  #train and get probaility predictions on test model
+  test_probabilities = train_test_i(df_train,df_test, k0 = k_choice)
+  #get best threshold for test probabilities
+  ti = best_threshold(test_probabilities, df_test = df_test)
+  print (paste("Best threshold is",ti))
+  #get test accuracy
+  y_act = df_test$R1
+  #print (paste("Length of Test Probabilities",nrow(df_test),length(test_probabilities)))
+  return (acc_func(y_act = y_act, pred_probs = test_probabilities, thresh = ti))
+}
+```
+
+Test the function for a sample value
+
+```{r}
+train_valid_func(df_train = df_train, df_test = df_valid, k_choice = 20)
+```
+
+#### Run the above function for variety of k values 
+
+```{r, include=FALSE}
+acc_df2 <- data.frame(matrix(ncol = 0, nrow = length(seq(3,end_k,2))))
+acc_df2$k_kknn = seq(3,end_k,2)
+acc = lapply(seq(3,end_k,2), function(x) 
+  train_valid_func(df_train = df_train, df_test = df_valid, k_choice = x))
+acc_df2$acc_validation_set = unlist(acc)
+```
+
+#### Plot the accuracy values
+
+```{r}
+ggplot(data = acc_df2, aes(x = k_kknn, y = acc_validation_set)) +
+  geom_line() +geom_point() +
+  geom_vline(xintercept = acc_df2[which.max(acc_df2$acc_validation_set),1],
+             color ="magenta", size = 1.5, alpha = 0.5) +
+  ggtitle(paste("max validation accuracy for k =",acc_df2[which.max(acc_df2$acc_validation_set),1]))
+
+print (paste("max validation accuracy for k =",acc_df2[which.max(acc_df2$acc_validation_set),1]))
+```
+
+#### Rebuild model with optimal k, with 
+
+-   Train = Train + Validation
+
+-   Test = Test
+
+```{r}
+k_optimal = acc_df2[which.max(acc_df2$acc_validation_set),1]
+acc_optimal_k = train_valid_func(df_train = rbind(df_train,df_valid), df_test = df_test, k_choice = k_optimal)
+print (paste("With optimal k value, Accuracy on test =",acc_optimal_k))
+```
+
+[**#Analysis**]{style="color:red"}
+
+Here we see that for k = 23, we get maximum average test accuracy of 84%.
+
+Note, that both the optimal k value here and the optimal accuracy value are different than part 1 above. The test accuracy here is lower at 84% compared to 87% of accuracy in CV case, which is expected, since 84% is accuracy at true test, while cv accuracy is averaged across all the folds.
