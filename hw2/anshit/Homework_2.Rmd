@@ -24,7 +24,7 @@ dim(cc_data)
 
 ```{r}
 iris_data = read.table('./iris.txt', header = TRUE, sep='', dec='.')
-head(iris_data)
+head(iris_data,50)
 dim(iris_data)
 ```
 
@@ -66,7 +66,7 @@ ggplot(melted_mat, aes(x=Var1, y=Var2, fill=value)) +
 
 ```{r}
 # Calculation of best 'K'
-elbow_graph_data <- data.frame(K=integer(), sum_of_square=double())
+elbow_graph_data <- data.frame(K=integer(), within_sum_of_square=double())
 for(k in seq(1, 10, by=1)){
   km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
   elbow_graph_data[nrow(elbow_graph_data) + 1, ] = c(k, km.res$tot.withinss)
@@ -78,15 +78,65 @@ elbow_graph_data
 ```
 
 ```{r}
-plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow Graph', )
+plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow Graph', col='blue')
 ```
+```{r}
+# Calculation of best 'K'
+bw_graph_data <- data.frame(K=integer(), between_sum_of_square=double())
+for(k in seq(1, 10, by=1)){
+  km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
+  bw_graph_data[nrow(bw_graph_data) + 1, ] = c(k, round(km.res$betweenss,2))
+}
+#options(scipen=999)
+bw_graph_data
+```
+
+```{r}
+plot(bw_graph_data, type='b', ylab='Betweeen Sum of Square (Intra Cluster)', main='BW SS Graph', col='green')
+```
+
+```{r}
+# Calculation of best 'K'
+ratio_graph_data <- data.frame(K=integer(), ratio=double())
+for(k in seq(2, 10, by=1)){
+  km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
+  ratio_graph_data[nrow(ratio_graph_data) + 1, ] = c(k, round(km.res$tot.withinss/km.res$betweenss,2))
+}
+#options(scipen=999)
+ratio_graph_data
+```
+```{r}
+plot(ratio_graph_data, type='b', ylab='Ratio Within/Between SS', main='Quality', col='red')
+```
+
+
 
 Best K is 3 because we are getting marginal benefit after that
 
 ```{r}
 best_km <- kmeans(as.matrix(scale(iris_data[,1:4])), 3, nstart = 25)
-best_km
+out<-cbind(iris_data,tagged_cluster=best_km$cluster)
+out
 ```
+```{r}
+boxplot(Sepal.Length~tagged_cluster,data=out)
+```
+
+```{r}
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+ggplot(out, aes(x=tagged_cluster, y=Sepal.Length,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+ggplot(out, aes(x=tagged_cluster, y=Sepal.Width,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+ggplot(out, aes(x=tagged_cluster, y=Petal.Length,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+ggplot(out, aes(x=tagged_cluster, y=Petal.Width,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+```
+Petal width and Petal Length are strong indicators for one class (setosa)
+
 
 ```{r}
 cm <- table(iris_data$Species, best_km$cluster)
@@ -94,9 +144,42 @@ cm
 ```
 
 ```{r}
-best_km$centers
+# function getStatusForClusterAndSpecie(row){
+#   if(row$tagged_cluster=="1" & row$Species=="versicolor"){'improper_versicolor'}
+#   else if(row$tagged_cluster=="2" & row$Species=="virginica"){'improper_virginica'}
+#   else if()
+#   
+# }
 ```
 
+
+```{r}
+classifier_df = out[!out$Species=='setosa',]
+classifier_df$status = ''
+classifier_df$status[(classifier_df$tagged_cluster=="1" & classifier_df$Species=="versicolor")] = 'improper_versicolor'
+classifier_df$status[(classifier_df$tagged_cluster=="2" & classifier_df$Species=="virginica")] = 'improper_virginica'
+classifier_df$status[(classifier_df$tagged_cluster=="2" & classifier_df$Species=="versicolor")] = 'proper_versicolor'
+classifier_df$status[(classifier_df$tagged_cluster=="1" & classifier_df$Species=="virginica")] = 'proper_virginica'
+
+classifier_df
+
+```
+```{r}
+classifier_df$status<-as.factor(classifier_df$status)
+ggplot(classifier_df, aes(x=status, y=Sepal.Length,fill=status)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+ggplot(classifier_df, aes(x=status, y=Sepal.Width,fill=status)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+ggplot(classifier_df, aes(x=status, y=Petal.Length,fill=status)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+
+ggplot(classifier_df, aes(x=status, y=Petal.Width,fill=status)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+```
+
+
+```{r}
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+ggplot(out, aes(x=tagged_cluster, y=Petal.Width,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")
+```
 
 ```{r}
 # renaming predicted clusters according to categorical response variable
