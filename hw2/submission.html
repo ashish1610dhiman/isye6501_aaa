@@ -1654,16 +1654,9 @@ header: #Analysis</strong></span></p>
 library(ggplot2)
 library(cowplot)
 library(reshape2)
-library(factoextra)</code></pre>
-<pre><code>## Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa</code></pre>
-<pre class="r"><code>library(kknn)
+library(factoextra)
+library(kknn)
 library(pROC)</code></pre>
-<pre><code>## Type &#39;citation(&quot;pROC&quot;)&#39; for a citation.</code></pre>
-<pre><code>## 
-## Attaching package: &#39;pROC&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:stats&#39;:
-## 
-##     cov, smooth, var</code></pre>
 <div id="read-data" class="section level2">
 <h2>Read Data</h2>
 <pre class="r"><code>org_cc_data &lt;- read.table(file = &#39;./data 3.1/credit_card_data-headers.txt&#39;, sep = &quot;\t&quot;, header = TRUE)
@@ -1992,15 +1985,37 @@ chosen from cross validation too.</p>
 <h2>Question 4.1</h2>
 <div id="example-1-market-segmentationretail-marketing" class="section level3">
 <h3>Example 1: Market Segmentation/Retail Marketing</h3>
-<p>Clustering models are frequently used for grouping customers with
-similar attributes</p>
-<p><strong>Objective Function (</strong><span class="math inline">\(Y\)</span>): <strong>Predictor Variables
-(</strong><span class="math inline">\(X_i\)</span>):</p>
+<p>Clustering models are used for grouping customers with similar
+attributes and features into buckets. A typical use case of this
+approach is to segment the customers into groups, such that they can be
+better targeted for a spectrum of business activities like targeted
+advertising. Segmenting the market helps the business better spend their
+money in the right way. One real life example is from Google and how it
+uses various predictors to cluster users on various factors to show
+targeted advertisement.</p>
+<p><strong>Predictor Variables (</strong><span class="math inline">\(X_i\)</span>): Some of the key predictors are
+given below:</p>
 <ul>
-<li><strong><em>Household Income</em></strong>:</li>
-<li><strong><em>Household Size</em></strong>:</li>
-<li><strong><em>Distance From Nearest Urban Area</em></strong>:</li>
-<li><strong><em>Head of Houehold Occupation</em></strong>:</li>
+<li><p><strong><em>Search History</em></strong>: This variable tracks
+user’s search history and helps in identifying what the user might me
+interested in. It can also help identify what the user wants in the
+market, for example if they are interested in the fuel efficiency or
+model or performance of a car.</p></li>
+<li><p><strong><em>Personal User Data</em></strong>: User’s personal
+data plays a key role in clustering user based on their age, gender,
+etc. Showing ads which are relevant to he user helps in creating a
+better user experience.</p></li>
+<li><p><strong><em>Links Clicked</em></strong>: This is a measure of
+user’s interaction with links available on the webpage. It helps with
+analyzing user behavior which helps in clustering on the basis of
+activity. Suppose a user searches for car but only interacts with links
+which lead to results from a certain brand of car. Determining this
+behavior will help in showing targeted ads from that brand to that
+particular user.</p></li>
+<li><p><strong><em>User Location</em></strong>: This is a user’s
+location. This helps with serving geographical appropriate ads. It would
+lead to bad user experience if a user from India is shown an ad for a
+product which is available in USA.</p></li>
 </ul>
 </div>
 </div>
