@@ -17,7 +17,7 @@ date: "2022-09-04"
 
 [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
-```{r, include=FALSE}
+```{r}
 
 set.seed(61)
 
@@ -45,19 +45,19 @@ Here we perform 5 fold cross validation, and follow the following pseudo code:
 
 1.  Divide the data into 5 equal parts
 
-2.  Choose i'th part as test data and train knn on the rest 4
+2.  Choose i'th part as test data and train knn model on the rest 4 parts
 
-    1.  Find the threshold which maximises AUC using ROC curve
+    1.  Find the optimal threshold using the ROC curve
 
     2.  With this optimal threshold find accuracy on test set
 
 3.  Repeat step 2 but slide i to the next part
 
-4.  When all parts are rotated into test set, calculate the measure for accuracy of model:
+4.  When all parts are rotated into the test set, calculate the measure for accuracy of model:
 
     1.  Mean test accuracy across 5 folds
 
-    2.  Min test accuracy across the 5 folds
+    2.  Min test accuracy across the 5 folds (optional)
 
 **We repeat the above 4 steps for different k values, to find the best model(or choice of k)**
 
@@ -75,14 +75,31 @@ print.data.frame(summary_df)
 
 [**#Analysis**]{style="color:red"}
 
-The above summary shows the mean of R1 and relative size of each fold. Ideally for all the folds this should be 45% mean and 20%, but we see minor deviations due to random sampling.
+The above summary shows the mean of R1 and relative size of each fold. Ideally for all the folds this should be 45% mean and 20% proportion, but we see minor deviations in individual folds due to random sampling.
 
 ```{r}
-#Function to train model and return prediction on test
+#Function to train model and return prediction probabilities on test
 train_test_i = function(df_train,df_test, k0 = 5){
   f = R1~A1+A2+A3+A8+A9+A10+A11+A12+A14+A15
   model = kknn(f,train = df_train,test = df_test,k=k0,kernel="rectangular",scale = TRUE)
   return (fitted(model))
+}
+
+# decide best threshold
+best_threshold = function(pred_prob, df_test=org_cc_data){
+  myroc <- roc(df_test$R1,as.numeric(unlist(pred_prob)), smooth=FALSE)
+  print(paste("AUC is",auc(myroc)))
+  #plot(myroc, auc.polygon=TRUE)
+  return (coords(myroc,x="best")["threshold"][[1]])
+}
+
+#Accuracy for best threshold
+acc_func = function(y_act, pred_probs, thresh = 0.5){
+  y_pred = lapply(pred_probs, function(x) if(x>=thresh) 1 else 0)
+  y_pred = as.numeric(unlist(y_pred))
+  acc_overall = sum(y_act == y_pred)/length(y_act)
+  acc_overall = round(acc_overall,4)* 100
+  return (acc_overall)
 }
 ```
 
@@ -144,12 +161,14 @@ mean(unlist(cv_accuracy))
 
 The values match the above test run values
 
-### Step 4: Iterate on different models and use CV for best model
+### Step 4: Iterate on different models(i.e on different values of k) and use CV for best model
 
-```{r, include=FALSE}
+Here we differentiate two knn models, only using the k hyperparameter
+
+```{r, results='hide'}
 #Iterate over k and get mean test accuracy
 
-end_k = 77 #half of test set size
+end_k = 77 #almost half of test set size
 
 acc_df <- data.frame(matrix(ncol = 0, nrow = length(seq(3,end_k,2))))
 acc_df$k_kknn = seq(3,end_k,2)
@@ -169,15 +188,15 @@ acc_df
 
 The above dataframe has average CV accuracy, min CV accuracy and Std. Deviation of Accuracy for each k value tried. While average CV Accuracy is a typical performance measure, we have also retained min CV accuracy which is like a lower bound on the performance of models across various validation sets, and we can also use max of this min bound to find optimal k.
 
-We have also kept standard deviation, such that we can able to infer the variance of accuracy across cross folds. This is helpful because the maximum CV accuracy for different values across k, varies within a percent (See graph below).
+We have also kept standard deviation, such that we will be able to infer the variance of accuracy across cross folds. This is helpful because the maximum CV accuracy for different values across k varies in a very close interval (around 87.5 %) -\> see graph below
 
-#### Plot the accuracy with k, and find optimal k which maximizes accuracy
+#### Plot the accuracy with k (hyperparameter of knn), and find optimal k which maximizes accuracy
 
 ```{r}
 ggplot(data = acc_df, aes(x = k_kknn, y = mean_cv_accuracy)) +
   geom_line() +geom_point() +
   geom_vline(xintercept = acc_df[which.max(acc_df$mean_cv_accuracy),1],
-             color ="magenta", size = 1.5, alpha = 0.5) +
+             color ="blue", size = 1.5, alpha = 0.5) +
   ggtitle(paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]))
 
 print (paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]))
@@ -187,7 +206,7 @@ print (paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]
 
 Here we see that for k = 47, we get maximum average CV accuracy of 87.74%.
 
-However, as noted above the nuance to note her is that, for k \> 30, that accuracy mostly oscillates at almost the same range with delta of 0.5. But since the standard deviation of max accuracy among cross folds is 2.45 itself, this choice of k becomes a little tricky. In other words, we
+However, as noted above the nuance to note here is that, for k \> 30, accuracy mostly oscillates at almost the same range with delta of 0.5. But since the standard deviation of max accuracy among cross folds is 2.45 itself, this choice of k becomes a little tricky. In other words, any k value above 30 seems appropriate, as the performance separation between the models is minimal
 
 Another effect to note here is that, this optimal value of k, is also subject to the random sampling done to create the folds, and will change with a different random seed setting.
 
@@ -197,9 +216,11 @@ acc_df[which.max(acc_df$mean_cv_accuracy),]
 
 ## Question 3.1
 
-### Part 2: Train, Validation and Test on knnn
+### Part 2: Train, Validation and Test on k-knn
 
 ```{r}
+set.seed(77)
+
 #split data into 70% train, 15% validation and 15% test
 df_copy2 = org_cc_data
 df_copy2$split_i <- sample(100, size = nrow(df_copy), replace = TRUE)
@@ -249,9 +270,9 @@ Test the function for a sample value
 train_valid_func(df_train = df_train, df_test = df_valid, k_choice = 20)
 ```
 
-#### Run the above function for variety of k values 
+#### Run the above function for variety of k values
 
-```{r, include=FALSE}
+```{r, results='hide'}
 acc_df2 <- data.frame(matrix(ncol = 0, nrow = length(seq(3,end_k,2))))
 acc_df2$k_kknn = seq(3,end_k,2)
 acc = lapply(seq(3,end_k,2), function(x) 
@@ -271,7 +292,7 @@ ggplot(data = acc_df2, aes(x = k_kknn, y = acc_validation_set)) +
 print (paste("max validation accuracy for k =",acc_df2[which.max(acc_df2$acc_validation_set),1]))
 ```
 
-#### Rebuild model with optimal k, with 
+#### Rebuild model with optimal k, with
 
 -   Train = Train + Validation
 
@@ -285,6 +306,8 @@ print (paste("With optimal k value, Accuracy on test =",acc_optimal_k))
 
 [**#Analysis**]{style="color:red"}
 
-Here we see that for k = 23, we get maximum average test accuracy of 84%.
+Note, that both the optimal k value here and the optimal accuracy value are different than part 1 above.
 
-Note, that both the optimal k value here and the optimal accuracy value are different than part 1 above. The test accuracy here is lower at 84% compared to 87% of accuracy in CV case, which is expected, since 84% is accuracy at true test, while cv accuracy is averaged across all the folds.
+The test accuracy here is the true (or best available) evaluation of the model chosen by us.
+
+However one might also argue that the optimal k values from both the approaches lie in a similar range, since any k value \>30 can be chosen from cross validation too.
