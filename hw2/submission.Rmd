@@ -17,7 +17,7 @@ date: "2022-09-04"
 
 [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 
 set.seed(61)
 
@@ -315,14 +315,17 @@ However one might also argue that the optimal k values from both the approaches 
 
 ### Example 1: Market Segmentation/Retail Marketing
 
-Clustering models are frequently used for grouping customers with similar attributes
+Clustering models are used for grouping customers with similar attributes and features into buckets. A typical use case of this approach is to segment the customers into groups, such that they can be better targeted for a spectrum of business activities like targeted advertising. Segmenting the market helps the business better spend their money in the right way. One real life example is from Google and how it uses various predictors to cluster users on various factors to show targeted advertisement.
 
-**Objective Function (**$Y$): **Predictor Variables (**$X_i$):
+**Predictor Variables (**$X_i$): Some of the key predictors are given below:
 
--   ***Household Income***:
--   ***Household Size***:
--   ***Distance From Nearest Urban Area***:
--   ***Head of Houehold Occupation***:
+-   ***Search History***: This variable tracks user's search history and helps in identifying what the user might me interested in. It can also help identify what the user wants in the market, for example if they are interested in the fuel efficiency or model or performance of a car.
+
+-   ***Personal User Data***: User's personal data plays a key role in clustering user based on their age, gender, etc. Showing ads which are relevant to he user helps in creating a better user experience.
+
+-   ***Links Clicked***: This is a measure of user's interaction with links available on the webpage. It helps with analyzing user behavior which helps in clustering on the basis of activity. Suppose a user searches for car but only interacts with links which lead to results from a certain brand of car. Determining this behavior will help in showing targeted ads from that brand to that particular user.
+
+-   ***User Location***: This is a user's location. This helps with serving geographical appropriate ads. It would lead to bad user experience if a user from India is shown an ad for a product which is available in USA.
 
 ## Question 4.2
 
