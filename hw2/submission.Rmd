@@ -39,7 +39,7 @@ dim(org_cc_data)
 
 ## Question 3.1
 
-### Part 1: Cross Validation for finding best knnn model
+### Part 1: Cross Validation for finding best knn model
 
 Here we perform 5 fold cross validation, and follow the following pseudo code:
 
@@ -352,7 +352,7 @@ head(iris_data,50)
 dim(iris_data)
 ```
 
-### Exploratory Data Analysis
+### Exploratory Data Analysis (for getting the best predictor combinations)
 
 ```{r}
 summary(iris_data)
@@ -405,7 +405,7 @@ plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow 
 
 [**#Analysis**]{style="color:red"}
 
-\* From the above graph, we can see that increasing the value of 'K' beyond 4 yields very low marginal benefit. \* Both 3 and 4 appear to be good values of 'K' and can be used depending on the use case. In this example, since we know that there are 3 classes, we expect 3 to be a more appropriate choice.
+\* From the above graph, we can see that increasing the value of 'K' beyond 4 yields very low marginal benefit. \* Both 3 and 4 appear to be good values of 'K' and can be used depending on the use case. In this example, since we know that there are 3 classes, we expect 3 to be a more appropriate choice. (\*Best value of k for our analysis\*)
 
 ```{r}
 # Other Method for determining best 'K' by sum of intra-cluster distance
@@ -438,7 +438,7 @@ confusion_matrix
 
 [**#Analysis**]{style="color:red"}
 
-From the confusion matrix, we can infer the following: \* Cluster 3 shows highest proportion of setosa class. In fact it encompasses 100% of that class. \* Cluster 2 has the highest proportion of versicolor class. \* Cluster 1 has the highest proportion of virginia class.
+From the confusion matrix, we can infer the following: \* Cluster 3 shows highest proportion of setosa class. In fact it encompasses 100% of that class. \* Cluster 2 has the highest proportion of versicolor class. \* Cluster 1 has the highest proportion of virginica class.
 
 However in comparison to cluster 3 which is purely setosa; clusters 1 and 2 have a significant no. of data points of a different class. In other words, there is confusion between classes in clusters 1 and 2.
 
@@ -500,7 +500,7 @@ alt_kmeans
 fviz_cluster(alt_kmeans, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
 ```
 
-### Accuracy in individual classes
+### Accuracy in individual classes (to see how well clustering predicts flower type)
 
 If cluster 1 is virginica, cluster 2 is versicolor, cluster 3 is setosa
 
