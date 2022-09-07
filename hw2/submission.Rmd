@@ -311,3 +311,180 @@ Note, that both the optimal k value here and the optimal accuracy value are diff
 The test accuracy here is the true (or best available) evaluation of the model chosen by us.
 
 However one might also argue that the optimal k values from both the approaches lie in a similar range, since any k value \>30 can be chosen from cross validation too.
+
+## Question 4.1
+
+### Example 1: Market Segmentation/Retail Marketing
+
+Clustering models are frequently used for grouping customers with similar attributes
+
+**Objective Function (**$Y$): **Predictor Variables (**$X_i$):
+
+-   ***Household Income***:
+-   ***Household Size***:
+-   ***Distance From Nearest Urban Area***:
+-   ***Head of Houehold Occupation***:
+
+## Question 4.2
+
+```{r, results='hide'}
+iris_data = read.table('./iris.txt', header = TRUE, sep='', dec='.')
+head(iris_data,50)
+dim(iris_data)
+```
+
+### Exploratory Data Analysis
+
+```{r}
+summary(iris_data)
+```
+
+```{r}
+table(iris_data$Species)
+```
+
+```{r}
+# Density Plots
+my_plots = lapply(colnames(iris_data), function(x){
+  p = ggplot(iris_data, aes(fill = Species)) + aes_string(x)
+  if(x!='Species') {
+    p = p + geom_density(alpha=.34)
+  }
+})
+
+plot_grid(plotlist = my_plots)
+```
+
+[**#Analysis**]{style="color:red"} From the above distribution, we can make the following inferences: 1. Petal.Length and Petal.Width provide clear separation between the setosa vs the other classes. In clustering we expect these variables to be significantly lower in the cluster dominated by the 'setosa' classes. 2. We observe that while Sepal.Width and Sepal.Length have different central tendencies, they also show high degree of overlap between the different classes at the fringes.
+
+```{r}
+# Correlation Matrix
+cor_mat = round(cor(iris_data[,1:4]), 2)
+cor_mat[upper.tri(cor_mat)] <- NA
+melted_mat = melt(cor_mat)
+ggplot(melted_mat, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() + geom_text(aes(Var1, Var2, label=value), color='white', size=3)
+```
+
+[**#Analysis**]{style="color:red"} From the above matrix we observed the following: 1. Petal Length and Width are highly correlated 2. Sepal Length and Petal Width are highly correlated also 3. Sepal length and Sepal Width show negligible dependence 4. Sepal width is negatively correlated petal length and width
+
+### Modelling
+
+```{r}
+# Calculation of best 'K' by elbow graph for total sum of squares within
+elbow_graph_data <- data.frame(K=integer(), within_sum_of_square=double())
+for(k in seq(1, 10, by=1)){
+  km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
+  elbow_graph_data[nrow(elbow_graph_data) + 1, ] = c(k, km.res$tot.withinss)
+}
+plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow Graph', col='blue')
+```
+
+[**#Analysis**]{style="color:red"} \* From the above graph, we can see that increasing the value of 'K' beyond 4 yields very low marginal benefit. \* Both 3 and 4 appear to be good values of 'K' and can be used depending on the use case. In this example, since we know that there are 3 classes, we expect 3 to be a more appropriate choice.
+
+```{r}
+# Other Method for determining best 'K' by sum of intra-cluster distance
+bw_graph_data <- data.frame(K=integer(), between_sum_of_square=double())
+for(k in seq(1, 10, by=1)){
+  km.res <- kmeans(as.matrix(scale(iris_data[,1:4])), k, nstart = 25)
+  bw_graph_data[nrow(bw_graph_data) + 1, ] = c(k, round(km.res$betweenss,2))
+}
+plot(bw_graph_data, type='b', ylab='Betweeen Sum of Square (Intra Cluster)', main='Betweeen Sum of Square (Intra Cluster) Graph', col='green')
+```
+
+[**#Analysis**]{style="color:red"} \* Similarly to elbow-graph, this plot also shows 3 and 4 to be good choices for 'K'.
+
+```{r, include=FALSE}
+best_km <- kmeans(as.matrix(scale(iris_data[,1:4])), 3, nstart = 25)
+out<-cbind(iris_data,tagged_cluster=best_km$cluster)
+out$tagged_cluster<-as.factor(out$tagged_cluster)
+
+getBoxPlot <- function(df, y_val){
+  ggplot(df, aes(x=tagged_cluster, y=y_val,fill=tagged_cluster)) + geom_boxplot(alpha=0.3) +theme(legend.position="none")  + xlab('Cluster')
+}
+```
+
+```{r}
+confusion_matrix <- table(iris_data$Species, best_km$cluster)
+confusion_matrix
+```
+
+[**#Analysis**]{style="color:red"} From the confusion matrix, we can infer the following: \* Cluster 3 shows highest proportion of setosa class. In fact it encompasses 100% of that class. \* Cluster 2 has the highest proportion of versicolor class. \* Cluster 1 has the highest proportion of virginia class.
+
+However in comparison to cluster 3 which is purely setosa; clusters 1 and 2 have a significant no. of data points of a different class. In other words, there is confusion between classes in clusters 1 and 2.
+
+```{r}
+getBoxPlot(out, 'Sepal.Length')
+getBoxPlot(out, 'Sepal.Width')
+getBoxPlot(out, 'Petal.Length')
+getBoxPlot(out, 'Petal.Width')
+```
+
+[**#Analysis**]{style="color:red"} \* As we expected from the density plots and confusion matrix, Petal width and Petal Length are significant discriminator for cluster 3, which is dominated by setosa class. \* While the other two variables provide relatively lower discrimination between the clusters.
+
+### Analysis of the misclassified points
+
+```{r}
+classifier_df = out[!out$Species=='setosa',]
+classifier_df$status = ''
+classifier_df$status[(classifier_df$tagged_cluster=="1" & classifier_df$Species=="versicolor")] = 'improper_versicolor'
+classifier_df$status[(classifier_df$tagged_cluster=="2" & classifier_df$Species=="virginica")] = 'improper_virginica'
+classifier_df$status[(classifier_df$tagged_cluster=="2" & classifier_df$Species=="versicolor")] = 'proper_versicolor'
+classifier_df$status[(classifier_df$tagged_cluster=="1" & classifier_df$Species=="virginica")] = 'proper_virginica'
+classifier_df$status<-as.factor(classifier_df$status)
+```
+
+```{r}
+getBoxPlot(classifier_df, 'Sepal.Length')
+getBoxPlot(classifier_df, 'Sepal.Width')
+getBoxPlot(classifier_df, 'Petal.Length')
+getBoxPlot(classifier_df, 'Petal.Width')
+```
+
+[**#Analysis**]{style="color:red"}
+From the above plots, we see:
+* Distribution of sepal length is very similar for improperly classified versicolor and proper virginica. Similarly, the distribution of improperly classified virginica and proper versicolor are very similar too.
+* The same effect is apparent in Sepal width.
+* This apparent similarity can be a probable reason for clustering to confuse between the classes.
+
+```{r}
+# Centroids of Clusters
+kmeans_basic_table <- data.frame(best_km$size, best_km$centers)
+kmeans_basic_table
+```
+
+### Plotting Clusters
+
+```{r}
+fviz_cluster(best_km, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
+```
+
+[**#Analysis**]{style="color:red"}
+* It can be seen from the plot above that cluster 1 and 2 are closely knit (i.e. intra cluster separation is less) and hence we have the confusion in clustering some points for these 2 clusters . Cluster 3 has a better separability than the other 2 and hence it is a good demarcated cluster.
+* It is also apparent that cluster 3 has higher spread and hence can be split up into 2 clusters depending on the use case which also came up in our previous study (elbow graph to decide between k=3 and k=4)
+
+### Just a visualization with 4 Cluster Space to highlight the above point
+
+```{r}
+alt_kmeans <- kmeans(as.matrix(scale(iris_data[,1:4])), 4, nstart = 25)
+alt_kmeans
+fviz_cluster(alt_kmeans, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
+```
+
+### Accuracy in individual classes
+
+If cluster 1 is virginica, cluster 2 is versicolor, cluster 3 is setosa
+
+```{r}
+acc_versicolor = 1 - (11/50)
+acc_virginica = 1 - (14/50)
+acc_setosa = 1- (0/50)
+
+print (paste("Acc for versicolor",acc_versicolor))
+print (paste("Acc for virginica",acc_virginica))
+print (paste("Acc for setosa",acc_setosa))
+```
+
+[**#Analysis**]{style="color:red"}
+Thus we have 100% accuracy for setosa, while for the other two flowers
+we have accuracy in 70's.
