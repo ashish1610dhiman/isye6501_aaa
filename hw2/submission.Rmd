@@ -39,7 +39,7 @@ dim(org_cc_data)
 
 ## Question 3.1
 
-### Part 1: Cross Validation for finding best knnn model
+### Part 1: Cross Validation for finding best knn model
 
 Here we perform 5 fold cross validation, and follow the following pseudo code:
 
@@ -61,7 +61,7 @@ Here we perform 5 fold cross validation, and follow the following pseudo code:
 
     2.  Min test accuracy across the 5 folds (optional)
 
-**We repeat the above 4 steps for different k values, to find the best model(or choice of k)**
+**We repeat the above 1-4 steps for different k values, to find the best model(or choice of k)**
 
 ### Step 0:
 
@@ -73,10 +73,10 @@ df_copy = org_cc_data
 df_copy$split_i <- sample(100, size = nrow(df_copy), replace = TRUE)
 
 df_copy$split = "train"
-df_copy$split[70 < df_copy2$split_i] = "valid"
-df_copy$split[85 < df_copy2$split_i] = "test"
+df_copy$split[70 < df_copy$split_i] = "valid"
+df_copy$split[85 < df_copy$split_i] = "test"
 
-summary_df = aggregate(df_copy,list(df_copy$split), 
+summary_df = aggregate(df_copy$R1,list(df_copy$split), 
           FUN = function(x) c(mean = mean(x), proportion = length(x)/nrow(df_copy)))
 print.data.frame(summary_df)
 ```
@@ -219,7 +219,7 @@ acc_df
 
 The above dataframe has average CV accuracy, min CV accuracy and Std. Deviation of Accuracy for each k value tried. While average CV Accuracy is a typical performance measure, we have also retained min CV accuracy which is like a lower bound on the performance of models across various validation sets, and we can also use max of this min bound to find optimal k.
 
-We have also kept standard deviation, such that we will be able to infer the variance of accuracy across cross folds. This is helpful because the maximum CV accuracy for different values across k varies in a very close interval (around 87.5 %) -\> see graph below
+We have also kept standard deviation, such that we will be able to infer the variance of accuracy across cross folds. This is helpful because the maximum CV accuracy for different values across k varies in a very close interval (around 86.5 %) -\> see graph below
 
 #### Plot the accuracy with k (hyperparameter of knn), and find optimal k which maximizes accuracy
 
@@ -235,9 +235,9 @@ print (paste("max accuracy for k =",acc_df[which.max(acc_df$mean_cv_accuracy),1]
 
 [**#Analysis**]{style="color:red"}
 
-Here we see that for k = 47, we get maximum average CV accuracy of 87.74%.
+Here we see that for k = 33, we get maximum average CV accuracy of 87.18%.
 
-However, as noted above the nuance to note here is that, for k \> 30, accuracy mostly oscillates at almost the same range with delta of 0.5. But since the standard deviation of max accuracy among cross folds is 2.45 itself, this choice of k becomes a little tricky. In other words, any k value above 30 seems appropriate, as the performance separation between the models is minimal
+However, as noted above the nuance to note here is that, for k \> 25, accuracy mostly oscillates at almost the same range with delta of 1%. But since the standard deviation of max accuracy among cross folds is 4.47 itself, this choice of k becomes a little tricky. In other words, any k value above 25 seems appropriate, as the performance separation between the models is minimal
 
 Another effect to note here is that, this optimal value of k, is also subject to the random sampling done to create the folds, and will change with a different random seed setting.
 
@@ -268,25 +268,25 @@ Test the function for a sample value
 train_valid_func(df_train = df_train, df_test = df_valid, k_choice = 20)
 ```
 
-#### Rebuild model with optimal k, with
+#### Rebuild model with optimal k selected, for true test accuracy
 
 -   Train = Train + Validation
 
 -   Test = Test
 
 ```{r}
-k_optimal = acc_df2[which.max(acc_df$mean_cv_accuracy),1]
+k_optimal = acc_df[which.max(acc_df$mean_cv_accuracy),1]
 acc_optimal_k = train_valid_func(df_train = df_copy, df_test = df_test, k_choice = k_optimal)
 print (paste("With optimal k value, Accuracy on test =",acc_optimal_k))
 ```
 
 The above accuracy is a true(or best) measure/evaluation for our model
 
-### Question 3.1, Part 2: Train, Validation and Test 
+### Question 3.1, Part 2: Train, Validation and Test
 
-### Find optimal k using training on train and validation
+### Find optimal k using training on train and maximising accuracy on validation
 
-#### Run the train valid func function for variety of k values
+#### Run the train_valid_func function for variety of k values
 
 ```{r, results='hide', warning=FALSE, message=FALSE}
 acc_df2 <- data.frame(matrix(ncol = 0, nrow = length(seq(3,end_k,2))))
@@ -326,7 +326,7 @@ Note, that both the optimal k value here and the optimal accuracy value are diff
 
 The test accuracy here is the true (or best available) evaluation of the model chosen by us.
 
-However one might also argue that the optimal k values from both the approaches lie in a similar range, since any k value \>30 can be chosen from cross validation too.
+However one might also argue that the optimal k values from both the approaches lie in a similar range, since any k value \>25 can be chosen from cross validation too.
 
 ## Question 4.1
 
@@ -352,7 +352,7 @@ head(iris_data,50)
 dim(iris_data)
 ```
 
-### Exploratory Data Analysis
+### Exploratory Data Analysis (for getting the best predictor combinations)
 
 ```{r}
 summary(iris_data)
@@ -405,7 +405,7 @@ plot(elbow_graph_data, type='b', ylab='Total Sum of Square Within', main='Elbow 
 
 [**#Analysis**]{style="color:red"}
 
-\* From the above graph, we can see that increasing the value of 'K' beyond 4 yields very low marginal benefit. \* Both 3 and 4 appear to be good values of 'K' and can be used depending on the use case. In this example, since we know that there are 3 classes, we expect 3 to be a more appropriate choice.
+\* From the above graph, we can see that increasing the value of 'K' beyond 4 yields very low marginal benefit. \* Both 3 and 4 appear to be good values of 'K' and can be used depending on the use case. In this example, since we know that there are 3 classes, we expect 3 to be a more appropriate choice. (\*Best value of k for our analysis\*)
 
 ```{r}
 # Other Method for determining best 'K' by sum of intra-cluster distance
@@ -438,7 +438,7 @@ confusion_matrix
 
 [**#Analysis**]{style="color:red"}
 
-From the confusion matrix, we can infer the following: \* Cluster 3 shows highest proportion of setosa class. In fact it encompasses 100% of that class. \* Cluster 2 has the highest proportion of versicolor class. \* Cluster 1 has the highest proportion of virginia class.
+From the confusion matrix, we can infer the following: \* Cluster 3 shows highest proportion of setosa class. In fact it encompasses 100% of that class. \* Cluster 2 has the highest proportion of versicolor class. \* Cluster 1 has the highest proportion of virginica class.
 
 However in comparison to cluster 3 which is purely setosa; clusters 1 and 2 have a significant no. of data points of a different class. In other words, there is confusion between classes in clusters 1 and 2.
 
@@ -500,7 +500,7 @@ alt_kmeans
 fviz_cluster(alt_kmeans, data=scale(iris_data[,1:2]), geom=c("point"), ellipse.type = "euclid")
 ```
 
-### Accuracy in individual classes
+### Accuracy in individual classes (to see how well clustering predicts flower type)
 
 If cluster 1 is virginica, cluster 2 is versicolor, cluster 3 is setosa
 
