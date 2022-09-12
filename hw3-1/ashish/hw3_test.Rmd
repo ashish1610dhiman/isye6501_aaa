@@ -1,0 +1,59 @@
+---
+title: "HW3, Ashish EDA"
+output: html_notebook
+---
+
+```{r}
+data = read.table('../temps.txt', sep="\t", dec=".", header = TRUE)
+data
+```
+
+```{r}
+data_celsius = 
+```
+
+```{r}
+CUSUM_ad = function(x,days = data$DAY ,C = 0.30,T = 4){
+  mean_x = mean(x)
+  sd_x = sd(x)
+  C = C * sd_x
+  #apply cusum
+  x1 = lapply(x, function(xi)  (mean_x - xi - C))
+  st_df = data.frame(st=double())
+  st = 0
+  for(i in 1:length(x)){
+    #print (paste(i,class(st),class(x1[[i]])))
+    st = max(0, st + x1[[i]])
+    st_df[i,] = c(st)
+  }
+  #Find index where St > T
+  st_df$Day = days
+  st_df["anamoly"] = 0
+  st_df$anamoly[st_df$st > T] = 1
+  st_df$xt = x
+  #plot x with T and if decrease see
+  st_df
+}
+```
+
+```{r}
+check = CUSUM_ad(data$X1996)
+#library(ggplot2)
+par(mfrow=c(2,1))
+plot(check$x)
+plot(check$st)
+#ggplot(check, aes(x = Day, y = st)) + geom_point() + geom_line() +
+#  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
