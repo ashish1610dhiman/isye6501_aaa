@@ -1,0 +1,66 @@
+---
+name: "HW 3 Assignment"
+author: "Anshit Verma"
+date: "12/09/2022"
+output: "html_document"
+---
+
+### Question 6.2
+
+```{r}
+data = read.table('./temps.txt', sep="\t", dec=".", header = TRUE)
+data
+```
+
+
+```{r}
+summary(data$X1996)
+sd(data$X1996)
+```
+
+```{r}
+mean = 83.72
+st = 0
+x = 8
+st_df = data.frame(i=double(), st=double())
+for(i in 1:nrow(data)){
+  st = max(0, st + (mean - data$X1996[i] - x))
+  st_df[nrow(st_df)+1,] = c(i, st)
+}
+plot(st_df, xlab='Day', ylab='St', type='o')
+```
+
+```{r}
+yearly_mean = data.frame(DAY=data[,1], YearlyMean=rowMeans(data[,-1]))
+yearly_mean
+```
+
+```{r}
+summary(yearly_mean$YearlyMean)
+```
+
+
+
+```{r}
+mean = mean(yearly_mean$YearlyMean)
+st = 0
+x = 8
+st_df = data.frame(i=double(), st=double())
+for(i in 1:nrow(yearly_mean)){
+  st = max(0, st + (mean - yearly_mean$YearlyMean[i] - x))
+  st_df[nrow(st_df)+1,] = c(i, st)
+}
+plot(st_df, xlab='Day', ylab='St', type='o')
+```
+
+# Inferences - 
+1. Comparing the above plot with 1996, days when the temp is rising has shifted towards later part of the year, it suggests a change in season cycle.
+2. Our max value of our running sum has gotten lower which also suggests warm season in later year.
+3. Range of temp values has decreased (min has inc by 8 units) which has shifted temp towards mean.
+
+# TODO - 
+1. C and T hyperparameter - how to decide on values.
+2. Dividing in buckets to see better changes in YoY temps.
+Reference - https://rpubs.com/ssufian/658130
+
+
