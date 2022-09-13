@@ -1,22 +1,25 @@
 ---
 title: "HW3, Ashish EDA"
-output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 
 ```{r}
+library(grid)
+
+
 data = read.table('../temps.txt', sep="\t", dec=".", header = TRUE)
 data
 ```
 
 ```{r}
-data_celsius = 
-```
-
-```{r}
-CUSUM_ad = function(x,days = data$DAY ,C = 0.30,T = 4){
+CUSUM_ad = function(x, year, days = data$DAY ,C = 0.30,T = 4, if_c_relative = FALSE){
   mean_x = mean(x)
   sd_x = sd(x)
-  C = C * sd_x
+  if (if_c_relative) {
+    C = C * sd_x
+  }
   #apply cusum
   x1 = lapply(x, function(xi)  (mean_x - xi - C))
   st_df = data.frame(st=double())
@@ -32,22 +35,104 @@ CUSUM_ad = function(x,days = data$DAY ,C = 0.30,T = 4){
   st_df$anamoly[st_df$st > T] = 1
   st_df$xt = x
   #plot x with T and if decrease see
-  st_df
+  par(mfrow=c(2,1))
+  plot(st_df$x)
+  title(paste("Temperature (in Celsius) and S_t (bottom) for year",year), line = -1, outer = TRUE)
+  plot(st_df$st)
+  pushViewport(viewport())
+  grid.lines(x = c(0,1), y = grconvertY(T, "user", "ndc"), gp = gpar(col = "red"))
+  change_detected = which.max(st_df$st>T)
+  grid.lines(x = grconvertX(change_detected, "user", "ndc"), y = c(0,1), gp = gpar(col = "red"))
+  popViewport()
+  #return first point where St touches T
+  change_length = length(days)-change_detected
+  return (c(as.numeric(year),as.numeric(change_detected),as.numeric(change_length)))
 }
 ```
 
 ```{r}
-check = CUSUM_ad(data$X1996)
+CUSUM_ad(data$X1996,"1996", C= 5, T = 50)
 #library(ggplot2)
-par(mfrow=c(2,1))
-plot(check$x)
-plot(check$st)
+#par(mfrow=c(2,1))
+#plot(check$x)
+#plot(check$st)
 #ggplot(check, aes(x = Day, y = st)) + geom_point() + geom_line() +
 #  theme(axis.text.x = element_text(angle = 90))
 ```
 
 ```{r}
+### Transform to celsius
+temp_cols = names(data)[!(names(data) %in% c("DAY"))]
+#Transform to celsius
+data_celsius = data
+data_celsius[temp_cols] <- lapply(data_celsius[temp_cols], function(f) (f-32)*5/9)
+```
 
+```{r}
+CUSUM_ad(data_celsius[,"X1996"],1996, C = 3, T = 25)
+```
+
+```{r}
+### Run Cusum over data_celsius for all the years
+mean(unlist(lapply(temp_cols, function(col) 
+  sd(data_celsius[,col])
+  )))
+```
+
+```{r}
+### Run Cusum over data_celsius for all the years
+winter_start_days = lapply(temp_cols, function(col) 
+  CUSUM_ad(x=data_celsius[,col], year = substr(col,2,5), C = 6, T = 25)
+  )
+
+# barplot(sapply(winter_start_days,"[[",1),
+# main = "Variation of Winter Start from 1996 to 2015",
+# xlab = "Year",
+# ylab = "Days since Jul 1, when winter change detected",
+# names.arg = temp_cols,
+# col = "darkred",
+# horiz = FALSE)
+```
+
+```{r}
+### Run Cusum over data_celsius for all the years
+winter_start_days = lapply(temp_cols, function(col) 
+  CUSUM_ad(x=data_celsius[,col], year = substr(col,2,5), C = 4, T = 25)
+  )
+```
+
+```{r}
+change_df <- as.data.frame(do.call(rbind, winter_start_days))
+colnames(change_df) = c("year","winter_start","winter_length")
+change_df["year_bucket"] = "a.1996_2000"
+change_df[change_df$year>=2000,"year_bucket"] = "b.2000_2004"
+change_df[change_df$year>=2004,"year_bucket"] = "c.2004_2008"
+change_df[change_df$year>=2008,"year_bucket"] = "d.2008_2012"
+change_df[change_df$year>=2012,"year_bucket"] = "e.2012_2016"
+change_df
+```
+
+```{r}
+aggregate(cbind(winter_start,winter_length) ~ year_bucket, change_df, mean)
+```
+
+```{r}
+
+```
+
+```{r}
+barplot(sapply(winter_start_days,"[[",2),
+main = "Variation of Winter Start from 1996 to 2015",
+xlab = "Year",
+ylab = "Days since Jul 1, when winter change detected",
+names.arg = temp_cols,
+col = "darkred",
+horiz = FALSE)
+```
+
+```{r}
+plot(sapply(winter_start_days,"[[",1))
+axis(1, at=1:length(temp_cols),labels=temp_cols, las=3)
 ```
 
 ```{r}
