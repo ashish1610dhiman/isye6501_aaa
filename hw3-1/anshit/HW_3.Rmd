@@ -5,10 +5,15 @@ date: "12/09/2022"
 output: "html_document"
 ---
 
+```{r}
+library(grid)
+```
+
+
 ### Question 6.2
 
 ```{r}
-data = read.table('./temps.txt', sep="\t", dec=".", header = TRUE)
+data = read.table('../temps.txt', sep="\t", dec=".", header = TRUE)
 data
 ```
 
@@ -62,5 +67,144 @@ plot(st_df, xlab='Day', ylab='St', type='o')
 1. C and T hyperparameter - how to decide on values.
 2. Dividing in buckets to see better changes in YoY temps.
 Reference - https://rpubs.com/ssufian/658130
+
+
+```{r}
+### Transform to celsius
+temp_cols = names(data)[!(names(data) %in% c("DAY"))]
+#Transform to celsius
+data_celsius = data
+data_celsius[temp_cols] <- lapply(data_celsius[temp_cols], function(f) (f-32)*5/9)
+```
+
+
+```{r}
+CUSUM_ad = function(x, year, days = data$DAY ,C = 0.30, T = 4, if_c_relative = FALSE){
+  mean_x = mean(x)
+  sd_x = sd(x)
+  if (if_c_relative) {
+    C = C * sd_x
+  }
+  #apply cusum
+  x1 = lapply(x, function(xi)  (mean_x - xi - C))
+  st_df = data.frame(st=double())
+  st = 0
+  for(i in 1:length(x)){
+    #print (paste(i,class(st),class(x1[[i]])))
+    st = max(0, st + x1[[i]])
+    st_df[i,] = c(st)
+  }
+  #Find index where St > T
+  st_df$Day = days
+  st_df["anamoly"] = 0
+  st_df$anamoly[st_df$st > T] = 1
+  st_df$xt = x
+  #plot x with T and if decrease see
+  par(mfrow=c(2,1))
+  plot(st_df$x)
+  title(paste("Temperature (in Celsius) and S_t (bottom) for year",year), line = -1, outer = TRUE)
+  plot(st_df$st)
+  pushViewport(viewport())
+  grid.lines(x = c(0,1), y = grconvertY(T, "user", "ndc"), gp = gpar(col = "red"))
+  change_detected = which.max(st_df$st>T)
+  grid.lines(x = grconvertX(change_detected, "user", "ndc"), y = c(0,1), gp = gpar(col = "red"))
+  popViewport()
+  #return first point where St touches T
+  change_length = length(days)-change_detected
+  return (c(as.numeric(year),as.numeric(change_detected),as.numeric(change_length)))
+}
+```
+
+
+
+```{r}
+### Run Cusum over data_celsius for all the years
+winter_start_days = lapply(temp_cols, function(col) 
+  CUSUM_ad(x=data_celsius[,col], year = substr(col,2,5), C = 4, T = 25)
+  )
+```
+
+```{r}
+change_df <- as.data.frame(do.call(rbind, winter_start_days))
+colnames(change_df) = c("year","winter_start","winter_length")
+change_df["year_bucket"] = "a.1996_2000"
+change_df[change_df$year>=2000,"year_bucket"] = "b.2000_2004"
+change_df[change_df$year>=2004,"year_bucket"] = "c.2004_2008"
+change_df[change_df$year>=2008,"year_bucket"] = "d.2008_2012"
+change_df[change_df$year>=2012,"year_bucket"] = "e.2012_2016"
+change_df
+```
+
+```{r}
+aggregate(cbind(winter_start,winter_length) ~ year_bucket, change_df, mean)
+```
+
+
+```{r}
+month_df <- data.frame(data)
+month_df["month"] = "month"
+month_df[grepl( "Jul", month_df$DAY), "month"] = "Jul"
+month_df[grepl( "Aug", month_df$DAY), "month"] = "Aug"
+month_df[grepl( "Sep", month_df$DAY), "month"] = "Sep"
+month_df[grepl( "Oct", month_df$DAY), "month"] = "Oct"
+month_df = month_df[,-1]
+for ( col in 1:ncol(month_df)){
+    colnames(month_df)[col] <-  sub("X", "", colnames(month_df)[col])
+}
+month_df
+```
+
+```{r}
+year_bucketing_function = function(df){
+  df["year_bucket"] = "a.1996_2000"
+  df[df$Year>=2000,"year_bucket"] = "b.2000_2004"
+  df[df$Year>=2004,"year_bucket"] = "c.2004_2008"
+  df[df$Year>=2008,"year_bucket"] = "d.2008_2012"
+  df[df$Year>=2012,"year_bucket"] = "e.2012_2016"
+  df
+}
+```
+
+
+```{r}
+aggregate_on_month_and_transpose = function(df, func){
+  return_df = aggregate(. ~ month, df, func)
+  n = return_df$month
+  # transpose all but the first column (month)
+  return_df <- as.data.frame(t(return_df[,-1]))
+  colnames(return_df) <- n
+  return_df = cbind(Year = rownames(return_df), return_df)
+  rownames(return_df) = 1:nrow(return_df)
+  return_df = return_df[, c(1, 3, 2, 5, 4)]
+  return_df
+}
+```
+
+
+
+```{r}
+mean_df = aggregate_on_month_and_transpose(month_df, mean)
+mean_df = year_bucketing_function(mean_df)
+mean_df = mean_df[,-1]
+mean_df = aggregate(.~year_bucket, mean_df, mean)
+mean_df
+```
+
+```{r}
+min_df = aggregate_on_month_and_transpose(month_df, min)
+min_df = year_bucketing_function(min_df)
+min_df = min_df[,-1]
+min_df = aggregate(.~year_bucket, min_df, mean)
+min_df
+```
+
+
+```{r}
+max_df = aggregate_on_month_and_transpose(month_df, max)
+max_df = year_bucketing_function(max_df)
+max_df = max_df[,-1]
+max_df = aggregate(.~year_bucket, max_df, mean)
+max_df
+```
 
 
