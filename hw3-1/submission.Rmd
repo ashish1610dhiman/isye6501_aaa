@@ -33,7 +33,7 @@ head(data)
 
 ### Transform Temperature data from Fahrenheit to Celsius
 
-We can afford this transformation here, b'cos it only alters the scale of data, and not location of change.
+**We can afford this transformation here, b'cos it only alters the scale of data, and not location of change.**
 
 ```{r}
 ### Transform to celsius
@@ -71,6 +71,18 @@ geom_boxplot(aes(x=factor(month, level = month_order), y=value, color=variable))
 
 ## Question 6.1
 
+### Credit Risk Triggers during the Covid pandemic
+
+The Covid pandemic created a dynamic Credit Risk situation. It warranted preactive monitoring of risky segments of the portfolio, to be ahead of the recession curve. Hence, during pandemic, we monitored the "Natural Disaster" Trigger data from Bureau, to ascertain, if there was a "change picking up" and we should account for it.
+
+**Natural Disaster Trigger:** Regulations in the US, mandate different lenders to report to Credit Bureaus, accounts who are availing financial relief on account of "Natural Disasters". This information is then collated by the Bureau and shared with all the participating lenders.
+
+**CUSUM Application**: The trigger data was shared daily, basis the real-time events. This essentially translated to a time series of #Natural Disasters triggers received each day. The shape of this curve greatly resembled the Covid cases chart. *Cusum could be applied on this time series to ascertain if the triggers generated from covid were different from historical natural disaster triggers like hurricanes etc.*
+
+**C & T choice**:
+
+C & T could be chosen such that the model detects the covid change but neglects the change seen previously with other natural disasters.
+
 ## Question 6.2
 
 ### Part 1: Start of Winter through cusum
@@ -93,10 +105,8 @@ CUSUM_ad = function(x, year, days = data$DAY ,C = 0.30,T = 4, if_c_relative = FA
     st = max(0, st + x1[[i]])
     st_df[i,] = c(st)
   }
-  #Find index where St > T
+  #Ancillary Columns
   st_df$Day = days
-  st_df["anamoly"] = 0
-  st_df$anamoly[st_df$st > T] = 1
   st_df$xt = x
   #plot x with T and if decrease see
   par(mfrow=c(2,1))
@@ -137,7 +147,7 @@ C is like the margin for noise built into the model. From the above graphs it is
 
 ***Here Winter Start = Days since Jul 1 until our model detects Start of Winter (or Summer end)***
 
-*\*Fall ignored here for brevity*
+*\*Fall and Winter are considered equivalent for this analysis*
 
 ```{r}
 C_effect = as.data.frame(do.call(rbind, C_effect))
@@ -164,15 +174,17 @@ As expected altering T, does not effect St. Simply put it is just the threshold,
 ```{r}
 T_effect = as.data.frame(do.call(rbind, T_effect))
 colnames(T_effect) = c("year","winter_start","winter_length")
-T_effect$C = seq(1,20,2)
-plot(x=T_effect$C,y=T_effect$winter_start,type='o')
+T_effect$T = seq(1,100,20)
+plot(x=T_effect$T,y=T_effect$winter_start,type='o')
 ```
 
 [**#Analysis**]{style="color:red"}
 
 Increasing the effect of T too thus makes the model less sensitive, and delays the resolution of change, i.e. *winter_start* increases.
 
-### Basis the above inferences we have picked C= and T= (basis hit and trial)
+### Basis the above inferences we have picked C=3.5 and T=35 (basis hit and trial)
+
+The value of C here implies that, fluctations within 3.5 Celsius are discarded as noise.
 
 ```{r}
 winter_start_days = lapply(temp_cols, function(col) 
@@ -199,16 +211,21 @@ summary(change_df$winter_start)
 
 [**#Analysis**]{style="color:red"}
 
-**We can from p25 and p75 here, that for majority of years, our model detects start of winter from 15th to 23rd October.**
+**We have p25 = 107 and p75=115 here, i.e. for majority of years, our model detects start of winter between 15th to 23rd October.**
+
+**However we also see 1 NA, which requires more investigation.**
 
 ```{r}
 change_df[is.na(change_df$winter_start),]
 ```
 
-For 2014, we are unable to detect the start of winter till Oct 31. It could be that September and October was unusually hot for 2014 or it showed high variability and no sustined drop in the data time period available.
+For 2014, we are unable to detect the start of winter till Oct 3, and it might be the case that winter started in Nov that year. This might happen because because September and October was unusually hot for 2014 or temperature showed high variability and no sustained drop in the data time period was visible.
+
+If required this behaviour could be easily handled by altering the C and T values.
 
 ```{r}
-CUSUM_ad(x=data_celsius[,"X2014"], year = substr("X2014",2,5), C = 3.5, T = 35)
+#If we want altered model
+CUSUM_ad(x=data_celsius[,"X2014"], year = substr("X2014",2,5), C = 3, T = 35)
 data_celsius$month = unlist(
   lapply(data_celsius$DAY, function(x) substr(x,start = nchar(x)-3+1,stop = nchar(x)+1)))
 data_mod <- melt(data_celsius, id.vars='month', 
@@ -236,7 +253,7 @@ change_df[which.min(change_df$winter_start),]
 
 ### Part 2: Has Atlanta become warmer over the years ?
 
-We have the years into a four month window. if suppose Atlanta has become warmer, on average the start of winter should be more delayed in recent years compared to 1990's.
+We have the bucketed years into a four year window. if suppose Atlanta has become warmer, on average the start of winter should be more delayed in recent years compared to 1990's.
 
 ```{r}
 summary_df = aggregate(winter_start ~ year_bucket, change_df, mean)
@@ -245,7 +262,7 @@ summary_df
 
 [**#Analysis**]{style="color:red"}
 
-We do see a slight delay in onset of winter in Atlanta from 1996 to 2015. This trend generally holds except for 2008 to 2011, which seems like a relatively cooler epoch.
+**We do see a slight delay in onset of winter in Atlanta from 1996 to 2015. This trend generally holds except for 2008 to 2011, which seems like a relatively cooler epoch.**
 
 We can further test this hypothesis by looking at average temperatures of different months in the same windows.
 
@@ -287,6 +304,10 @@ mean_df = aggregate(.~year_bucket, mean_df, mean)
 mean_df
 ```
 
+[**#Analysis**]{style="color:red"}
+
+What we see here is that average daily high temperature has mostly remained static over the years. Except for the window: 2008 to 2012 where Jul & Aug are warmer but October is cooler. This is also the same epoch where the winter start trend breaks. This implies that this epoch was very volatile.
+
 #### Mean of Min temperature
 
 ```{r}
@@ -297,6 +318,10 @@ min_df = aggregate(.~year_bucket, min_df, mean)
 min_df
 ```
 
+[**#Analysis**]{style="color:red"}
+
+When looking at the average of coldest daily high temperature, what we see is that there is little variation for most of the months, except for Sept. The coldest day on average was more hotter over the years, especially in the 2000s.
+
 #### Mean of Max temperature
 
 ```{r}
@@ -306,3 +331,7 @@ max_df = max_df[,-1]
 max_df = aggregate(.~year_bucket, max_df, mean)
 max_df
 ```
+
+[**#Analysis**]{style="color:red"}
+
+We see here that on average, August/Sept are seeing more hot days in recent years.
