@@ -1,0 +1,252 @@
+---
+title: "ISYE 6501"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+date: "2022-09-12"
+---
+
+# Submission HW2 \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
+
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+```{r}
+#lib imports
+library(grid)
+library(reshape2)
+library(ggplot2)
+```
+
+### Read Data
+
+```{r}
+data = read.table('./temps.txt', sep="\t", dec=".", header = TRUE)
+head(data)
+```
+
+### Transform Temperature data from Fahrenheit to Celsius
+
+We can afford this transformation here, b'cos it only alters the scale of data, and not location of change.
+
+```{r}
+### Transform to celsius
+temp_cols = names(data)[!(names(data) %in% c("DAY"))]
+#Transform to celsius
+data_celsius = data
+data_celsius[temp_cols] <- lapply(data_celsius[temp_cols], function(f) (f-32)*5/9)
+```
+
+### EDA of Temperature Data
+
+```{r}
+summary(data_celsius)
+```
+
+### Visualize the temperature series with a boxplot
+
+```{r}
+data_celsius$month = unlist(
+  lapply(data_celsius$DAY, function(x) substr(x,start = nchar(x)-3+1,stop = nchar(x)+1)))
+data_mod <- melt(data_celsius, id.vars='month', 
+                  measure.vars=temp_cols)
+month_order = c('Jul', 'Aug', 'Sep', 'Oct')
+ggplot(data_mod) +
+geom_boxplot(aes(x=factor(month, level = month_order), y=value, color=variable))
+```
+
+[**#Analysis**]{style="color:red"}
+
+-   As expected, Jul and Aug are hotter for all the years. In Sept the temperature starts cooling off a bit and cools further in October.
+
+-   Also, Sept and October especially October has much more Temperature variance, and this effect is much more accentuated for the 2000s.
+
+-   Because for most years the temperature starts tapering between Sept and Oct, we expect the change detection to lie somewhere in that range.
+
+## Question 6.1
+
+## Question 6.2
+
+### Part 1: Start of Winter through cusum
+
+#### Function for Cusum
+
+```{r}
+CUSUM_ad = function(x, year, days = data$DAY ,C = 0.30,T = 4, if_c_relative = FALSE){
+  mean_x = mean(x)
+  sd_x = sd(x)
+  if (if_c_relative) {
+    C = C * sd_x
+  }
+  #apply cusum
+  x1 = lapply(x, function(xi)  (mean_x - xi - C))
+  st_df = data.frame(st=double())
+  st = 0
+  for(i in 1:length(x)){
+    #print (paste(i,class(st),class(x1[[i]])))
+    st = max(0, st + x1[[i]])
+    st_df[i,] = c(st)
+  }
+  #Find index where St > T
+  st_df$Day = days
+  st_df["anamoly"] = 0
+  st_df$anamoly[st_df$st > T] = 1
+  st_df$xt = x
+  #plot x with T and if decrease see
+  par(mfrow=c(2,1))
+  plot(st_df$x,type='o')
+  title(paste("xt (in Celsius) and St (bottom) for (year,C,T):",year,C,T), line = -1, outer = TRUE)
+  plot(st_df$st,type='o')
+  pushViewport(viewport())
+  grid.lines(x = c(0,1), y = grconvertY(T, "user", "ndc"), gp = gpar(col = "red"))
+  change_detected = which.max(st_df$st>T)
+  #for zero true, which max returns 1
+  if (sum(st_df$st>T) == 0){
+    print ("No value greater than T")
+    change_detected = NaN
+  }
+  grid.lines(x = grconvertX(change_detected, "user", "ndc"), y = c(0,1), gp = gpar(col = "red"))
+  popViewport()
+  #return first point where St touches T
+  change_length = length(days)-change_detected
+  return (c(as.numeric(year),as.numeric(change_detected),as.numeric(change_length)))
+}
+```
+
+Test the function for 1996
+
+```{r}
+CUSUM_ad(data$X1996,"1996", C= 5, T = 10)
+```
+
+#### Understanding the effect of C on St calculation
+
+```{r}
+C_effect = lapply(seq(1,20,2),function(x) CUSUM_ad(data$X1996,"1996", C= x, T = 10))
+```
+
+[**#Analysis**]{style="color:red"}
+
+C is like the margin for noise built into the model. From the above graphs it is apparent that increasing C, makes the end part (\>90) of St more grainy and abrupt. This is intuitive since St = max(0,St-1 + (mean - x - C), therefore any drop in xt (relative to mean) lower than C would be marginalised. This further warrants that St would be increasing only when we see a sustained drop in xt beyond C.
+
+***Here Winter Start = Days since Jul 1 until our model detects Start of Winter (or Summer end)***
+
+*\*Fall ignored here for brevity*
+
+```{r}
+C_effect = as.data.frame(do.call(rbind, C_effect))
+colnames(C_effect) = c("year","winter_start","winter_length")
+C_effect$C = seq(1,20,2)
+plot(x=C_effect$C,y=C_effect$winter_start,type='o')
+title("Effect of C on Winter Start")
+```
+
+[**#Analysis**]{style="color:red"}
+
+Increasing the effect of C thus makes the model less sensitive, and delays the resolution of change, winter_start increases.
+
+#### Understanding the effect of T on St calculation
+
+```{r}
+T_effect = lapply(seq(1,100,20),function(x) CUSUM_ad(data$X1996,"1996", C= 5, T = x))
+```
+
+[**#Analysis**]{style="color:red"}
+
+As expected altering T, does not effect St. Simply put it is just the threshold, we have decided to identify the marker of change.
+
+```{r}
+T_effect = as.data.frame(do.call(rbind, T_effect))
+colnames(T_effect) = c("year","winter_start","winter_length")
+T_effect$C = seq(1,20,2)
+plot(x=T_effect$C,y=T_effect$winter_start,type='o')
+```
+
+[**#Analysis**]{style="color:red"}
+
+Increasing the effect of T too thus makes the model less sensitive, and delays the resolution of change, i.e. *winter_start* increases.
+
+### Basis the above inferences we have picked C= and T= (basis hit and trial)
+
+```{r}
+winter_start_days = lapply(temp_cols, function(col) 
+  CUSUM_ad(x=data_celsius[,col], year = substr(col,2,5), C = 3.5, T = 35)
+  )
+```
+
+### Analyse the effect of Model over the years
+
+```{r}
+change_df <- as.data.frame(do.call(rbind, winter_start_days))
+colnames(change_df) = c("year","winter_start","winter_length")
+change_df["year_bucket"] = "a.1996_2000"
+change_df[change_df$year>=2000,"year_bucket"] = "b.2000_2004"
+change_df[change_df$year>=2004,"year_bucket"] = "c.2004_2008"
+change_df[change_df$year>=2008,"year_bucket"] = "d.2008_2012"
+change_df[change_df$year>=2012,"year_bucket"] = "e.2012_2016"
+change_df
+```
+
+```{r}
+summary(change_df$winter_start)
+```
+
+[**#Analysis**]{style="color:red"}
+
+**We can from p25 and p75 here, that for majority of years, our model detects start of winter from 15th to 23rd October.**
+
+```{r}
+change_df[is.na(change_df$winter_start),]
+```
+
+For 2014, we are unable to detect the start of winter till Oct 31. It could be that September and October was unusually hot for 2014 or it showed high variability and no sustined drop in the data time period available.
+
+```{r}
+CUSUM_ad(x=data_celsius[,"X2014"], year = substr("X2014",2,5), C = 3.5, T = 35)
+data_celsius$month = unlist(
+  lapply(data_celsius$DAY, function(x) substr(x,start = nchar(x)-3+1,stop = nchar(x)+1)))
+data_mod <- melt(data_celsius, id.vars='month', 
+                  measure.vars=c("X2012","X2013","X2014","X2015"))
+month_order = c('Jul', 'Aug', 'Sep', 'Oct')
+ggplot(data_mod) +
+geom_boxplot(aes(x=factor(month, level = month_order), y=value, color=variable))
+```
+
+[**#Analysis**]{style="color:red"}
+
+As expected October for 2014 is relatively warmer.
+
+#### Year with most delayed winter start
+
+```{r}
+change_df[which.max(change_df$winter_start),]
+```
+
+#### Year with quickest winter start
+
+```{r}
+change_df[which.min(change_df$winter_start),]
+```
+
+### Part 2: Has Atlanta become warmer over the years ?
+
+We have the years into a four month window. if suppose Atlanta has become warmer, on average the start of winter should be more delayed in recent years compared to 1990's.
+
+```{r}
+summary_df = aggregate(winter_start ~ year_bucket, change_df, mean)
+summary_df
+```
+
+[**#Analysis**]{style="color:red"}
+
+We do see a slight delay in onset of winter in Atlanta from 1996 to 2015. This trend generally holds except for 2008 to 2011, which seems like a relatively cooler epoch.
+
+```{r}
+
+```
