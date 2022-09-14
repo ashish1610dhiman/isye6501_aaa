@@ -247,6 +247,62 @@ summary_df
 
 We do see a slight delay in onset of winter in Atlanta from 1996 to 2015. This trend generally holds except for 2008 to 2011, which seems like a relatively cooler epoch.
 
-```{r}
+We can further test this hypothesis by looking at average temperatures of different months in the same windows.
 
+```{r}
+aggregate_on_month_and_transpose = function(df, func){
+  return_df = aggregate(. ~ month, df, func)
+  n = return_df$month
+  # transpose all but the first column (month)
+  return_df <- as.data.frame(t(return_df[,-1]))
+  colnames(return_df) <- n
+  return_df = cbind(Year = rownames(return_df), return_df)
+  rownames(return_df) = 1:nrow(return_df)
+  return_df = return_df[, c(1, 3, 2, 5, 4)]
+  return_df
+}
+
+month_df = data_celsius[,!(names(data_celsius) %in% c("DAY"))]
+for ( col in 1:ncol(month_df)){
+    colnames(month_df)[col] <-  sub("X", "", colnames(month_df)[col])
+}
+
+year_bucketing_function = function(df){
+  df["year_bucket"] = "a.1996_2000"
+  df[df$Year>=2000,"year_bucket"] = "b.2000_2004"
+  df[df$Year>=2004,"year_bucket"] = "c.2004_2008"
+  df[df$Year>=2008,"year_bucket"] = "d.2008_2012"
+  df[df$Year>=2012,"year_bucket"] = "e.2012_2016"
+  df
+}
+```
+
+#### Mean of Average temperature (daily high)
+
+```{r}
+mean_df = aggregate_on_month_and_transpose(month_df, mean)
+mean_df = year_bucketing_function(mean_df)
+mean_df = mean_df[,-1]
+mean_df = aggregate(.~year_bucket, mean_df, mean)
+mean_df
+```
+
+#### Mean of Min temperature
+
+```{r}
+min_df = aggregate_on_month_and_transpose(month_df, min)
+min_df = year_bucketing_function(min_df)
+min_df = min_df[,-1]
+min_df = aggregate(.~year_bucket, min_df, mean)
+min_df
+```
+
+#### Mean of Max temperature
+
+```{r}
+max_df = aggregate_on_month_and_transpose(month_df, max)
+max_df = year_bucketing_function(max_df)
+max_df = max_df[,-1]
+max_df = aggregate(.~year_bucket, max_df, mean)
+max_df
 ```
