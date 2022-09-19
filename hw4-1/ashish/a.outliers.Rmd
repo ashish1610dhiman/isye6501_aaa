@@ -1,0 +1,191 @@
+---
+title: "a.outliers"
+author: "Ashish Dhiman"
+date: "2022-09-19"
+output: html_document
+---
+
+```{r}
+library(outliers)
+library(ggplot2)
+library(qqplotr)
+```
+
+```{bash}
+pwd
+head -4 ../uscrime.txt
+```
+
+### EDA of Crime Data
+
+```{r}
+crime_df = read.table("../uscrime.txt", sep="\t", header= TRUE)
+dim(crime_df)
+```
+
+3 states are missing in the data, we don't know which.
+
+#### Data and variable meaning:
+
+Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
+
+| Variable | Description                                                                            |
+|-------------------|-----------------------------------------------------|
+| M        | percentage of males aged 14--24 in total state population                              |
+| So       | indicator variable for a southern state                                                |
+| Ed       | mean years of schooling of the population aged 25 years or over                        |
+| Po1      | per capita expenditure on police protection in 1960                                    |
+| Po2      | per capita expenditure on police protection in 1959                                    |
+| LF       | labour force participation rate of civilian urban males in the age-group 14-24         |
+| M.F      | number of males per 100 females                                                        |
+| Pop      | state population in 1960 in hundred thousands                                          |
+| NW       | percentage of nonwhites in the population                                              |
+| U1       | unemployment rate of urban males 14--24                                                |
+| U2       | unemployment rate of urban males 35--39                                                |
+| Wealth   | wealth: median value of transferable assets or family income                           |
+| Ineq     | income inequality: percentage of families earning below half the median income         |
+| Prob     | probability of imprisonment: ratio of number of commitments to number of offenses      |
+| Time     | average time in months served by offenders in state prisons before their first release |
+| Crime    | crime rate: number of offenses per 100,000 population in 1960                          |
+
+```{r}
+summary(crime_df$Crime)
+```
+
+```{r}
+aggregate(cbind(Pop) ~ So, crime_df, sum)
+
+#split by Southern states
+south_split = aggregate(cbind(Ineq,M,M.F,U1,Time,NW,Ed) ~ So, crime_df, mean)
+south_split
+```
+
+We see that Southern states in 1960s(on average):
+
+-   had \<50% of non So population
+
+-   were more inequal
+
+-   had greater proportion of NW
+
+-   lower mean years of schooling
+
+```{r}
+#Boxplot of crime
+boxplot(crime_df$Crime, horizontal = TRUE)
+```
+
+```{r}
+boxplot(crime_df$Crime, horizontal = TRUE)
+```
+
+```{r}
+#Plot crime by population, expect this to be straight line
+plot(x=crime_df$Pop,y=crime_df$Crime)
+```
+
+### Outliers package
+
+To apply Grubbs Test
+
+Grubbs' test ([Grubbs 1969](https://www.itl.nist.gov/div898/handbook/eda/section4/eda43.htm#Grubbs) and [Stefansky 1972](https://www.itl.nist.gov/div898/handbook/eda/section4/eda43.htm#Stefansky)) is used to detect a single [outlier](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm) in a univariate data set that follows an [approximately normal](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm#Normality) distribution.
+
+| H~0~: | There are no outliers in the data set        |
+|-------|----------------------------------------------|
+| H~a~: | There is exactly one outlier in the data set |
+
+The two salient points here are:
+
+1.  Data is Normally Distributed
+2.  There is exactly one outlier
+
+Before applying the test let us check for these two assumptions:
+
+#### Assumption 1: Normality
+
+```{r}
+hist(crime_df$Crime,breaks=25)
+```
+
+```{r}
+hist(log(crime_df$Crime),breaks=20)
+```
+
+Basis Histogram the data presents deviation from normality as the distribution is not symmetric, especially without the log transformation\
+
+```{r}
+ggplot(mapping = aes(sample = crime_df$Crime)) + stat_qq_point(size = 2) + stat_qq_line(color="green")
+```
+
+```{r}
+ggplot(mapping = aes(sample = log(crime_df$Crime))) + stat_qq_point(size = 2) + stat_qq_line(color="green")
+```
+
+Similarly from QQ plot, we see that the points diverge from line especially at the extremes, hinting at non-normality in that region. While log of crime is relatively more normal
+
+**Therefore we can not be 100% sure of the efficiency of Grubbs Test in our case.**
+
+#### Assumption 2: Exactly one outlier
+
+To check this assumption let us check the box plot of crime:
+
+```{r}
+#boxplot(crime_df$Crime ~ crime_df$So)
+boxplot(crime_df$Crime)
+```
+
+```{r}
+#boxplot(log(crime_df$Crime))
+```
+
+two points seem pretty far away from the whiskers.
+
+Let us further examine these two points:
+
+```{r}
+mask = crime_df$Crime > 1800
+crime_df[mask,"Crime"]
+```
+
+```{r}
+crime_df[mask,]
+```
+
+We see that among these two points, there is disproportionate difference of population, $157 * 10^5$ vs $3 * 10^5$.
+
+While the Crime variable is already normalised, number of offenses per 100,000 population in 1960. such high crime rate for such small population seems counter intuitive, especially so when all other relevant variables like Po1, Po2, Prob are fairly similar. Let us examine this in detail by plotting
+
+```{r}
+plot(x=crime_df$Pop,y=crime_df$Crime)
+cor(crime_df$Pop,crime_df$Crime)
+```
+
+```{r}
+cor(crime_df$Prob,crime_df$Crime)
+```
+
+### Grubbs Test
+
+```{r}
+grubbs.test(crime_df$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
+```
+
+As per Grubbs test, we get p-value of \~8%. $\implies$ there is 8% chance that the given point is the effect of randomness, assuming Null Hypothesis is True. Generally we want p-value to be as low as possible to reject the Null hypothesis.In this case 8% value is slightly larger than typical thresholds of 5%, and warrants detailed investigation before classifying the point as outlier.
+
+Let us test what happens to the 2nd highest point, if the highest is removed
+
+```{r}
+mask1 = crime_df$Crime<1990
+grubbs.test(crime_df[mask1,]$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
+```
+
+After removing 1993 point we get even lower p-value this time
+
+```{r}
+mask2 = crime_df$Crime<1960
+grubbs.test(crime_df[mask2,]$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
+```
+
+```{r}
+
+```
