@@ -38,7 +38,7 @@ my_plots <- lapply(names(crime_data), function(var_x){
 
 plot_grid(plotlist = my_plots)
 
-### Corealtion
+### Correlation
 cormat <- round(cor(crime_data),2)
 cormat[upper.tri(cormat)] <- NA
 melted_cormat <- melt(cormat)
@@ -51,13 +51,14 @@ geom_text(aes(Var1, Var2, label = value),
           color = "white", size = 3)
 ```
 ## Observations: 
-Wealth and Income Inequality are 2 highly correlated variables (-ve correlation) ,hence we can 1 variable out of both
+Wealth and Income Inequality are 2 highly correlated variables (-ve correlation) ,hence we can pick only 1 variable out of the 2
 Po1 and Po2 are 2 correlated variables , hence we can pick only 1 out of 2 
 Same goes for U1 and U2, , hence we can pick only 1 out of 2 
 
 The dependent variable Crime Rate has high correlation with the following variables :
-Po1 and Po2 -> surprising to see +ve correlation
-Prob -> makes sense to have -ve correlation
+Po1 and Po2 -> we see a surprising +ve correlation with crime rate , As regression cannot be used for defining a causal relation , we can infer the other way round that since the crime rate is higher , that could be the reason of a higher per capita expenditure on police protection.
+
+Prob -> makes sense to have -ve correlation in this case . As the crime rate is bound to decrease if probability of imprisonment increases.
 
 ```{r}
 options(scipen=999)
@@ -71,13 +72,21 @@ plot(lmodel_1)
 ```
 
 ```{r}
-# removing all the potential outliers/influential points
+# removing all the potential outliers/influential points based on the diagnostic plots of linear regression model
 crime_data_wo<-crime_data[-c(11,46,29),]
 dim(crime_data_wo)
 # Linear Regression model with all features on the reduced dataset
 lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data_wo)
 summary(lmodel_1)
 ```
+
+
+```{r}
+new_datapoint<-data.frame(M=c(14.0),So=c(as.factor(0)),Ed=c(10.0),Po1=c(12.0),Po2=c(15.5),LF=c(0.640),M.F=c(94.0),Pop=c(150),NW=c(1.1),U1=c(0.120),U2=c(3.6),Wealth=c(3200),Ineq=c(20.1),Prob=c(0.04),Time=c(39.0))
+crime_rate_pred<-predict(lmodel_1,newdata = new_datapoint)
+crime_rate_pred
+```
+
 
 ```{r}
 # Linear Regression Model with Limited features (removing highly correlated features)
