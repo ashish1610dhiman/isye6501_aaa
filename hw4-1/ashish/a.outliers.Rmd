@@ -30,7 +30,7 @@ dim(crime_df)
 Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
 
 | Variable | Description                                                                            |
-|-------------------|-----------------------------------------------------|
+|----------|----------------------------------------------------------------------------------------|
 | M        | percentage of males aged 14--24 in total state population                              |
 | So       | indicator variable for a southern state                                                |
 | Ed       | mean years of schooling of the population aged 25 years or over                        |
@@ -52,11 +52,14 @@ Criminologists are interested in the effect of punishment regimes on crime rates
 summary(crime_df$Crime)
 ```
 
-```{r}
-aggregate(cbind(Pop) ~ So, crime_df, sum)
+### Difference b/w Southern and Northern states
 
-#split by Southern states
-south_split = aggregate(cbind(Ineq,M,M.F,U1,Time,NW,Ed) ~ So, crime_df, mean)
+```{r}
+aggregate(Pop ~ So, crime_df, sum)
+```
+
+```{r}
+south_split = aggregate(cbind(Crime,Ineq,M,M.F,U1,Time,NW,Ed) ~ So, crime_df, mean)
 south_split
 ```
 
@@ -71,18 +74,11 @@ We see that Southern states in 1960s(on average):
 -   lower mean years of schooling
 
 ```{r}
-#Boxplot of crime
-boxplot(crime_df$Crime, horizontal = TRUE)
-```
-
-```{r}
-boxplot(crime_df$Crime, horizontal = TRUE)
-```
-
-```{r}
-#Plot crime by population, expect this to be straight line
+#Plot crime by population
 plot(x=crime_df$Pop,y=crime_df$Crime)
 ```
+
+The two extreme large points seem like potentail outliers
 
 ### Outliers package
 
@@ -94,7 +90,7 @@ Grubbs' test ([Grubbs 1969](https://www.itl.nist.gov/div898/handbook/eda/section
 |-------|----------------------------------------------|
 | H~a~: | There is exactly one outlier in the data set |
 
-The two salient points here are:
+The two salient assumptions here are:
 
 1.  Data is Normally Distributed
 2.  There is exactly one outlier
@@ -111,7 +107,7 @@ hist(crime_df$Crime,breaks=25)
 hist(log(crime_df$Crime),breaks=20)
 ```
 
-Basis Histogram the data presents deviation from normality as the distribution is not symmetric, especially without the log transformation\
+Basis Histogram the data presents deviation from normality as the distribution is not symmetric, especially without the log transformation. We can further test this with QQ plot
 
 ```{r}
 ggplot(mapping = aes(sample = crime_df$Crime)) + stat_qq_point(size = 2) + stat_qq_line(color="green")
@@ -121,7 +117,7 @@ ggplot(mapping = aes(sample = crime_df$Crime)) + stat_qq_point(size = 2) + stat_
 ggplot(mapping = aes(sample = log(crime_df$Crime))) + stat_qq_point(size = 2) + stat_qq_line(color="green")
 ```
 
-Similarly from QQ plot, we see that the points diverge from line especially at the extremes, hinting at non-normality in that region. While log of crime is relatively more normal
+Similarly from QQ plot, we see that the points diverge from line especially at the extremes, hinting at non-normality in that region. While log of crime is relatively more normal, the log transformation alters the scale of data, and we might want to detect outliers before applying it.
 
 **Therefore we can not be 100% sure of the efficiency of Grubbs Test in our case.**
 
@@ -130,15 +126,10 @@ Similarly from QQ plot, we see that the points diverge from line especially at t
 To check this assumption let us check the box plot of crime:
 
 ```{r}
-#boxplot(crime_df$Crime ~ crime_df$So)
 boxplot(crime_df$Crime)
 ```
 
-```{r}
-#boxplot(log(crime_df$Crime))
-```
-
-two points seem pretty far away from the whiskers.
+As seen in scatter plot, there are two points seem pretty far away from the whiskers.
 
 Let us further examine these two points:
 
@@ -153,16 +144,17 @@ crime_df[mask,]
 
 We see that among these two points, there is disproportionate difference of population, $157 * 10^5$ vs $3 * 10^5$.
 
-While the Crime variable is already normalised, number of offenses per 100,000 population in 1960. such high crime rate for such small population seems counter intuitive, especially so when all other relevant variables like Po1, Po2, Prob are fairly similar. Let us examine this in detail by plotting
+While the Crime variable is already normalised, number of offenses per 100,000 population in 1960. such high crime rate for such small population seems counter intuitive, especially so when all other relevant variables like Po1, Po2, Prob are fairly similar. Let us examine this in detail by checking corelation:
 
 ```{r}
-plot(x=crime_df$Pop,y=crime_df$Crime)
-cor(crime_df$Pop,crime_df$Crime)
+paste(cor(crime_df$Pop,crime_df$Crime),cor(crime_df$Prob,crime_df$Crime))
 ```
 
-```{r}
-cor(crime_df$Prob,crime_df$Crime)
-```
+Basis population figures in 1960's, there are two candidate states for 1993 point: Wyoming & Nevada.
+
+And comparing data from [Disatster Center](https://www.disastercenter.com/crime/wycrime.htm), Wyoming does have roughly twice the national average crime rate, which is similar to our data as well (1993/ 905.1). Maybe there was some particular event in 1960 in Wyoming, which is causing such behavior. To understand this better, we need some expertise of Crime rate Trends in Wyoming.
+
+<https://en.wikipedia.org/wiki/1960_United_States_census#:~:text=The%20United%20States%20census%20of,enumerated%20during%20the%201950%20census.>
 
 ### Grubbs Test
 
@@ -179,13 +171,6 @@ mask1 = crime_df$Crime<1990
 grubbs.test(crime_df[mask1,]$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
 ```
 
-After removing 1993 point we get even lower p-value this time
+After removing 1993 point we get even lower p-value this time, hinting that 1969 in absence of 1993 is a much stronger candidate for being a outlier.
 
-```{r}
-mask2 = crime_df$Crime<1960
-grubbs.test(crime_df[mask2,]$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
-```
-
-```{r}
-
-```
+Thus in conclusion, we have two candidate outliers in the data, 1993 and 1969 point. 1993 point is the highest crime rate and presents weak evidence to discard it as ouitlier, however, to be definitive, we need to study the Wyoming angle in detail, especially in relevance to exact modelling needs at hand.
