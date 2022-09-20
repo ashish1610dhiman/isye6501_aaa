@@ -74,6 +74,7 @@ new_datapoint<-data.frame(M=c(14.0),So=c(as.factor(0)),Ed=c(10.0),Po1=c(12.0),Po
 crime_rate_pred<-predict(lmodel_1,newdata = new_datapoint)
 crime_rate_pred
 ```
+# Interpreting the output of the linear regression model : 
 
 ```{r}
 options(scipen=999)
