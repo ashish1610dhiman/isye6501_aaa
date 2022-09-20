@@ -1,0 +1,110 @@
+---
+title: "mlr_assg4"
+output: html_document
+date: "2022-09-20"
+---
+
+```{r setup, include=FALSE}
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+library(grid)
+```
+
+
+```{r crimes}
+crime_data<-read.table(file = "./uscrime.txt", sep = "\t",header=TRUE)
+head(crime_data)
+dim(crime_data)
+summary(crime_data)
+```
+
+#### Data Distribution and Pairwise Corelation
+### Data Distribution
+```{r}
+my_plots <- lapply(names(crime_data), function(var_x){
+  p <- 
+    ggplot(crime_data) +
+    aes_string(var_x)
+
+  if(var_x %in% list("So")) {
+    p <- p + geom_bar()
+
+  } else {
+    p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+### Corealtion
+cormat <- round(cor(crime_data),2)
+cormat[upper.tri(cormat)] <- NA
+melted_cormat <- melt(cormat)
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var1, Var2, label = value),
+          color = "white", size = 3)
+```
+## Observations: 
+Wealth and Income Inequality are 2 highly correlated variables (-ve correlation) ,  hence we'll pick only 1 out of 2 
+Po1 and Po2 are 2 correlated variables , hence we'll pick only 1 out of 2 
+Same goes for U1 and U2, , hence we'll pick only 1 out of 2 
+
+The dependent variable Crime Rate has high correlation with the following variables :
+Po1 and Po2 -> surprising to see +ve correlation
+Prob -> makes sense to have -ve correlation
+
+```{r}
+crime_data$So<-as.factor(crime_data$So)
+# Linear Regression model with all features
+lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_1)
+
+# Linear Regression Model with Limited features (removing highly correlated features)
+lmodel_2<-lm(Crime~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_2)
+
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(lmodel_2)
+```
+
+
+
+```{r}
+crime_data_wo<-crime_data[-c(11,19,29),]
+dim(crime_data_wo)
+# Linear Regression model with all features
+lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data_wo)
+summary(lmodel_1)
+# Linear Regression Model with Limited features (removing highly correlated features)
+lmodel_4<-lm(Crime~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data_wo)
+summary(lmodel_4)
+
+```
+
+
+```{r}
+# Plot after removing the outliers/leverage points
+par(mfrow = c(2, 2))
+plot(lmodel_4)
+```
+
+```{r}
+crime_data_wo<-crime_data[-c(11,19,29,46),]
+dim(crime_data_wo)
+# Linear Regression model with all features
+lmodel_5<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data_wo)
+summary(lmodel_5)
+# Linear Regression Model with Limited features (removing highly correlated features)
+lmodel_6<-lm(Crime~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data_wo)
+summary(lmodel_6)
+
+```
