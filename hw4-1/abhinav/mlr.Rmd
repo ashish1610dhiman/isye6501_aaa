@@ -51,27 +51,39 @@ geom_text(aes(Var1, Var2, label = value),
           color = "white", size = 3)
 ```
 ## Observations: 
-Wealth and Income Inequality are 2 highly correlated variables (-ve correlation) ,  hence we'll pick only 1 out of 2 
-Po1 and Po2 are 2 correlated variables , hence we'll pick only 1 out of 2 
-Same goes for U1 and U2, , hence we'll pick only 1 out of 2 
+Wealth and Income Inequality are 2 highly correlated variables (-ve correlation) ,hence we can 1 variable out of both
+Po1 and Po2 are 2 correlated variables , hence we can pick only 1 out of 2 
+Same goes for U1 and U2, , hence we can pick only 1 out of 2 
 
 The dependent variable Crime Rate has high correlation with the following variables :
 Po1 and Po2 -> surprising to see +ve correlation
 Prob -> makes sense to have -ve correlation
 
 ```{r}
+options(scipen=999)
 crime_data$So<-as.factor(crime_data$So)
 # Linear Regression model with all features
 lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data)
 summary(lmodel_1)
+# plotting the residuals to check for assumptions in the plain vanilla model with all features
+par(mfrow = c(2, 2))
+plot(lmodel_1)
+```
 
+```{r}
+# removing all the potential outliers/influential points
+crime_data_wo<-crime_data[-c(11,46,29),]
+dim(crime_data_wo)
+# Linear Regression model with all features on the reduced dataset
+lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data_wo)
+summary(lmodel_1)
+```
+
+```{r}
 # Linear Regression Model with Limited features (removing highly correlated features)
 lmodel_2<-lm(Crime~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data)
 summary(lmodel_2)
 
-```
-
-```{r}
 par(mfrow = c(2, 2))
 plot(lmodel_2)
 ```
