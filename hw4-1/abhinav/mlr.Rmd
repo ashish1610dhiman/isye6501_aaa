@@ -102,7 +102,7 @@ best.lam<-bc$x[which(bc$y==max(bc$y))]
 
 ```
 # Observations: 
-Since , the above graph gives us a value of $\lambda \approx 0$ , therefore taking a log transformation of the dependent variable y makes more sense. 
+Since , the above graph gives us the best value of $\lambda$ to be around 0 only , therefore taking a log transformation of the dependent variable y makes more sense. 
 
 ```{r}
 # Taking log transformation of the dependent variable with all features
