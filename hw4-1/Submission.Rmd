@@ -1,0 +1,392 @@
+---
+title: "Submission HW2"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+# ISYE 6501 \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
+
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+## Question 5.1
+
+```{r setup, include=FALSE}
+library(outliers)
+library(ggplot2)
+library(qqplotr)
+library(cowplot)
+library(reshape2)
+library(grid)
+```
+
+```{bash}
+pwd
+head -4 ./uscrime.txt
+```
+
+### EDA of Crime Data
+
+```{r}
+crime_df = read.table("./uscrime.txt", sep="\t", header= TRUE)
+dim(crime_df)
+```
+
+3 states are missing in the data, we don't know which.
+
+#### Data and variable meaning:
+
+Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
+
+| Variable | Description                                                                            |
+|-------------------|-----------------------------------------------------|
+| M        | percentage of males aged 14--24 in total state population                              |
+| So       | indicator variable for a southern state                                                |
+| Ed       | mean years of schooling of the population aged 25 years or over                        |
+| Po1      | per capita expenditure on police protection in 1960                                    |
+| Po2      | per capita expenditure on police protection in 1959                                    |
+| LF       | labour force participation rate of civilian urban males in the age-group 14-24         |
+| M.F      | number of males per 100 females                                                        |
+| Pop      | state population in 1960 in hundred thousands                                          |
+| NW       | percentage of nonwhites in the population                                              |
+| U1       | unemployment rate of urban males 14--24                                                |
+| U2       | unemployment rate of urban males 35--39                                                |
+| Wealth   | wealth: median value of transferable assets or family income                           |
+| Ineq     | income inequality: percentage of families earning below half the median income         |
+| Prob     | probability of imprisonment: ratio of number of commitments to number of offenses      |
+| Time     | average time in months served by offenders in state prisons before their first release |
+| Crime    | crime rate: number of offenses per 100,000 population in 1960                          |
+
+```{r}
+summary(crime_df$Crime)
+```
+
+### Difference b/w Southern and Northern states
+
+```{r}
+aggregate(Pop ~ So, crime_df, sum)
+```
+
+```{r}
+south_split = aggregate(cbind(Crime,Ineq,M,M.F,U1,Time,NW,Ed) ~ So, crime_df, mean)
+south_split
+```
+
+We see that Southern states in 1960s(on average):
+
+-   had \<50% of non So population
+
+-   were more inequal
+
+-   had greater proportion of NW
+
+-   lower mean years of schooling
+
+```{r}
+#Plot crime by population
+plot(x=crime_df$Pop,y=crime_df$Crime)
+```
+
+The two extreme large points seem like potentail outliers
+
+### Outliers package
+
+Grubbs' test ([Grubbs 1969](https://www.itl.nist.gov/div898/handbook/eda/section4/eda43.htm#Grubbs) and [Stefansky 1972](https://www.itl.nist.gov/div898/handbook/eda/section4/eda43.htm#Stefansky)) is used to detect a single [outlier](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm) in a univariate data set that follows an [approximately normal](https://www.itl.nist.gov/div898/handbook/eda/section3/eda35h.htm#Normality) distribution.
+
+| H~0~: | There are no outliers in the data set        |
+|-------|----------------------------------------------|
+| H~a~: | There is exactly one outlier in the data set |
+
+The two salient assumptions here are:
+
+1.  Data is Normally Distributed
+2.  There is exactly one outlier
+
+Before applying the test let us check for these two assumptions:
+
+#### Assumption 1: Normality
+
+```{r}
+hist(crime_df$Crime,breaks=25)
+```
+
+```{r}
+hist(log(crime_df$Crime),breaks=20)
+```
+
+Basis Histogram the data presents deviation from normality as the distribution is not symmetric, especially without the log transformation. We can further test this with QQ plot
+
+```{r}
+ggplot(mapping = aes(sample = crime_df$Crime)) + stat_qq_point(size = 2) + stat_qq_line(color="green")
+```
+
+```{r}
+ggplot(mapping = aes(sample = log(crime_df$Crime))) + stat_qq_point(size = 2) + stat_qq_line(color="green")
+```
+
+Similarly from QQ plot, we see that the points diverge from line especially at the extremes, hinting at non-normality in that region. While log of crime is relatively more normal, the log transformation alters the scale of data, and we might want to detect outliers before applying it.
+
+**Since assumption 1 is not fully satisfied, we can not be 100% sure of the efficiency of Grubbs Test in our case.**
+
+#### Assumption 2: Exactly one outlier
+
+To check this assumption let us check the box plot of crime:
+
+```{r}
+boxplot(crime_df$Crime)
+```
+
+As seen in scatter plot, there are two points that seem pretty far away from the whiskers.
+
+Let us further examine these two points:
+
+```{r}
+mask = crime_df$Crime > 1800
+crime_df[mask,"Crime"]
+```
+
+```{r}
+crime_df[mask,]
+```
+
+We see that among these two points, there is disproportionate difference of population, $157 * 10^5$ vs $3 * 10^5$.
+
+While the Crime variable is already normalised, number of offenses per 100,000 population in 1960. such high crime rate for such small population seems counter intuitive, especially so when all other relevant variables like Po1, Po2, Prob are fairly similar. Let us examine this in detail by checking corelation:
+
+```{r}
+paste(cor(crime_df$Pop,crime_df$Crime),cor(crime_df$Prob,crime_df$Crime))
+```
+
+Basis population figures in 1960's, there are two candidate states for 1993 point: Wyoming & Nevada.
+
+And comparing data from [Disatster Center](https://www.disastercenter.com/crime/wycrime.htm), Wyoming does have roughly twice the national average crime rate, which is similar to our data as well (1993/ 905.1). Maybe there was some particular event in 1960 in Wyoming, which is causing such behavior. To understand this better, we need some expertise of Crime rate Trends in Wyoming.
+
+**Hence this point maybe outlier but there is high likelihood that the underlying data is true, and the decision of dropping it would depend on our exact modelling needs.**
+
+<https://en.wikipedia.org/wiki/1960_United_States_census#:~:text=The%20United%20States%20census%20of,enumerated%20during%20the%201950%20census.>
+
+**Since assumption 2 is again not fully satisfied, we can not be 100% sure of the efficiency of Grubbs Test in our case.**
+
+### Apply Grubbs Test
+
+```{r}
+grubbs.test(crime_df$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
+```
+
+As per Grubbs test, we get p-value of \~8%. $\implies$ there is 8% chance that the given point is the effect of randomness, assuming Null Hypothesis is True. Generally we want p-value to be as low as possible to reject the Null hypothesis.In this case 8% value is slightly larger than typical thresholds of 5%, and warrants detailed investigation before classifying the point as outlier, which is in sync with analysis above.
+
+Let us also test what happens to the 2nd highest point, if the 1993 pt is removed
+
+```{r}
+mask1 = crime_df$Crime<1990
+grubbs.test(crime_df[mask1,]$Crime, type = 10, opposite = FALSE, two.sided = FALSE)
+```
+
+After removing 1993 point we get even lower p-value this time, hinting that 1969 in absence of 1993 is a much stronger candidate for being a outlier.
+
+Thus in conclusion, we have two candidate outliers in the data, 1993 and 1969 point. 1993 point is the highest crime rate and presents weak evidence to discard it as outlier, however, to be definitive, we need to study the Wyoming angle in detail, especially in relevance to exact modelling needs at hand.
+
+## Question 8.1
+
+### Example: Real Estate Price
+
+Linear Regression models find use case in the real estate industry to predict selling price for a particular property depending on the prediction variables.
+
+**Objective Function (Y)**: To predict the selling price of a property based in the predicting variables for that property
+
+**Predicting Variables (X_i)**: Some of the key predicting variables are given below -
+
+-   ***Location***: The location of the property is an important predictor for predicting the selling price. As properties in a good neighborhood will fetch higher prices than those in a relatively worse neighborhoods.
+
+-   ***Lot Size***: Lot size is defined as the area of the property. A large lot size is worth more than a smaller lot.
+
+-   ***Age of the House (Condition)***: Age of the house is the number of years since the construction of the house. It can also be considered as the condition metric of the house. A house with good condition grade can worth more than one with lower condition grade as it might incur lower maintenance cost.
+
+-   ***Garage Capacity***: Capacity of garage is defines as the number of cars a garage can hold. The ability of the garage to hold more cars is an important factor which appreciates the value of a property
+
+
+## Question 8.2
+
+```{r crimes}
+crime_data<-read.table(file = "./uscrime.txt", sep = "\t",header=TRUE)
+head(crime_data)
+dim(crime_data)
+summary(crime_data)
+```
+
+### Data Distribution and Pairwise Corelation
+```{r}
+my_plots <- lapply(names(crime_data), function(var_x){
+  p <- 
+    ggplot(crime_data) +
+    aes_string(var_x)
+
+  if(var_x %in% list("So")) {
+    p <- p + geom_bar()
+
+  } else {
+    p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+### Correlation
+cormat <- round(cor(crime_data),2)
+cormat[upper.tri(cormat)] <- NA
+melted_cormat <- melt(cormat)
+# plotting the correlation heatmap
+
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var1, Var2, label = value),
+          color = "white", size = 3)
+```
+
+[**#Analysis**]{style="color:red"}
+
+Wealth and Income Inequality are 2 highly correlated variables (-ve correlation), hence we can pick only 1 variable out of the 2.
+Po1 and Po2 are 2 highly correlated variables (+ve correlation), hence we can pick only 1 out of 2. 
+Same goes for U1 and U2, hence we can pick only 1 out of 2 
+
+The dependent variable Crime Rate has high correlation with the following variables :
+Po1 and Po2 -> we see a surprising +ve correlation with crime rate. As regression cannot be used for defining a causal relation , we can infer the other way round that since the crime rate is higher, that could be the reason of a higher per capita expenditure on police protection.
+
+Prob -> makes sense to have -ve correlation in this case. As the crime rate is bound to decrease if probability of imprisonment increases.
+
+###Linearity in data between independent and dependent variables
+
+```{r}
+plot(crime_data$Po1 ~ crime_data$Crime)
+```
+
+[**#Analysis**]{style="color:red"}
+
+From the aove plot we can observe that there seems to be a linear relationship between the dependent variable and one of the highly correlated feature. Thus our assumption of linearity holds true and we can implement linear regression model.
+
+###Initial Model
+
+```{r}
+options(scipen=999)
+crime_data$So<-as.factor(crime_data$So)
+# Linear Regression model with all features
+lmodel_1<-lm(Crime~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_1)
+# plotting the residuals to check for assumptions in the plain vanilla model with all features
+par(mfrow = c(2, 2))
+plot(lmodel_1)
+
+
+new_datapoint<-data.frame(M=c(14.0),So=c(as.factor(0)),Ed=c(10.0),Po1=c(12.0),Po2=c(15.5),LF=c(0.640),M.F=c(94.0),Pop=c(150),NW=c(1.1),U1=c(0.120),U2=c(3.6),Wealth=c(3200),Ineq=c(20.1),Prob=c(0.04),Time=c(39.0))
+crime_rate_pred<-predict(lmodel_1,newdata = new_datapoint)
+crime_rate_pred<-round(crime_rate_pred,2)
+print(paste("Predicted Value:", crime_rate_pred))
+```
+
+[**#Analysis**]{style="color:red"}
+
+**Interpreting the output of the linear regression model** : 
+Based on the model output , it appears that the features Ed, Ineq, Prob, M, Po1 are significant variables based on the p-values . \
+* The lower the p-value , the more significant the variable  because the p-value signifies the probability of the estimated coefficients $\hat{\beta_{i}}'s$ coming from the underlying assumed distribution of null hypothesis (Null Hypothesis states that $\beta_{i}'s=0$). Thus , lower the p-value , higher the probability that the coefficient of the variable is not equal to 0 and hence that variable is a good predictor.\
+
+* For this model, the $R^{2}$ value is 0.8 which means that 80% of the variance in the dependent variable is explained by the set of these independent variables .\
+
+* The predicted crime_rate for the given data point is `r crime_rate_pred`. Since this prediction lies outside the range of or dependent variable, we can further tune the model as the features of the predicting data point lie withing the domain of independent variables. \
+
+* From the 4 diagnostic plots associated with the linear regression model, we can see that the assumptions are mostly in place, error terms are normally distributed i.e. constant variance assumption and residuals are homogeneous around the fitted line. However , we can see slight bends in the left and right end in the plot of residuals vs fitted values. Thus, a possible remedy can be thought of as transforming the dependent variable (taking a log transformation reduces the range of possible variables).
+
+* Further from the QQ Plot it can be inferred that the data is normally distributed. Thus our normality assumption also holds true.
+
+**Points for further exploration** : 
+* Taking a log transformation of the dependent variable and then create a regression model.
+* Create a model with lower number of features (remove highly correlated features).
+* Look for possible outliers/leverage points (based on the residuals vs leverage plot - cook's distance) and remove them to see changes in the model output. 
+
+###Taking log transformation of the dependent variable with all features
+
+```{r}
+# Taking log transformation of the dependent variable with all features
+options(scipen=999)
+crime_data$So<-as.factor(crime_data$So)
+# Linear Regression model with all features
+lmodel_2<-lm(log(Crime)~M+So+Ed+Po1+Po2+LF+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_2)
+# plotting the residuals to check for assumptions in the plain vanilla model with all features
+par(mfrow = c(2, 2))
+plot(lmodel_2)
+
+crime_rate_pred<-predict(lmodel_2,newdata = new_datapoint)
+crime_rate_pred<- exp(crime_rate_pred)
+print(paste("Predicted Value:", round(crime_rate_pred,2)))
+```
+
+[**#Analysis**]{style="color:red"}
+
+Although the $R^{2}$ takes a slight dip, but it appears that the model assumptions are better satisfied here .\ 
+Points 11,19,46 seems to have around 1.5*standard deviation, thus these could be tested as potential outliers. \
+
+Again, the predicted crime_rate for the given data point is `r crime_rate_pred`. The value has gotten within the range of dependent variable. But we can still work on our model.
+
+###Taking log transformation of the dependent variable with selected features
+
+```{r}
+# Taking log transformation of the dependent variable with selected features
+options(scipen=999)
+crime_data$So<-as.factor(crime_data$So)
+# Linear Regression model with reduced # of features
+lmodel_3<-lm(log(Crime)~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_3)
+# plotting the residuals to check for assumptions in the plain vanilla model with all features
+par(mfrow = c(2, 2))
+plot(lmodel_3)
+
+crime_rate_pred<-predict(lmodel_3,newdata = new_datapoint)
+crime_rate_pred<- exp(crime_rate_pred)
+print(paste("Predicted Value:", round(crime_rate_pred,2)))
+```
+
+[**#Analysis**]{style="color:red"}
+
+* We can see that by removing a few predicting features, the value of $R_{2}$ has gotten worse. We are not able to explain much on the basis of our predicting feature.
+* We also observe that our predicted value for the new data point has gotten closer to the mean response.
+* Another thing to observe is the P-value for one feature ("Po1") has gotten significantly small and we can reject the null hypothesis. Thus it is a significant predictor for our model.
+
+```{r}
+plot(crime_data$Po1 ~ log(crime_data$Crime), main="Plot for one significant feature (Po1) v/s response (log(Crime))")
+abline(lm(crime_data$Po1 ~ log(crime_data$Crime)))
+```
+
+###Removing the potential outliers/influential points based on the diagnostic plots of linear regression model
+
+```{r}
+# removing the potential outliers/influential points based on the diagnostic plots of linear regression model
+crime_data_wo<-crime_data[-c(11, 19, 46),]
+
+# Taking log transformation of the dependent variable with all features
+options(scipen=999)
+crime_data$So<-as.factor(crime_data$So)
+# Linear Regression model with reduced # of features and removed potential influential points.
+lmodel_4<-lm(log(Crime)~M+So+Ed+Po1+LF+M.F+Pop+NW+U1+Ineq+Prob+Time,data=crime_data)
+summary(lmodel_4)
+# plotting the residuals to check for assumptions in the plain vanilla model with all features
+par(mfrow = c(2, 2))
+plot(lmodel_4)
+
+crime_rate_pred<-predict(lmodel_4,newdata = new_datapoint)
+crime_rate_pred<- exp(crime_rate_pred)
+print(paste("Predicted Value:", round(crime_rate_pred,2)))
+
+```
+
+[**#Analysis**]{style="color:red"}
+
+* As we can observe that after removing the potential outliers, there is no change in the model. Thus we can conclude that our assumption to classify the removed points as outliers is wrong.
