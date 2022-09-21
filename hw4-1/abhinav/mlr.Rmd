@@ -9,6 +9,7 @@ library(cowplot)
 library(ggplot2)
 library(reshape2)
 library(grid)
+library(MASS)
 ```
 
 
@@ -85,12 +86,23 @@ Based on the model output , it appears that the features Ed, Ineq, Prob,M , Po1 
 
 * The predicted crime_rate for the given data point is `r crime_rate_pred`.\
 
-* From the 4 diagnostic plots associated with the linear regression model , we can see that the assumptions are mostly in place , error terms are normally distributed and residuals are homogeneous around the fitted line. However , we can see slight bends in the left and right end in the plot of residuals vs fitted values. Thus , a possible remedy can be thought of as modelling the log of dependent variable based on independent variable. (because taking a log transformation reduces the range of possible variables.)
+* From the 4 diagnostic plots associated with the linear regression model , we can see that the assumptions are mostly in place although there are some slight deviations, error terms are normally distributed (deviation for a couple of points) and residuals are mostly homogeneous around the fitted line. However , we can see slight bends in the left and right end in the plot of residuals vs fitted values. Thus , a possible remedy can be thought of as modelling the log of dependent variable based on independent variable. (because taking a log transformation reduces the range of possible variables.)
 
 # Points for further exploration  : 
 * Taking a log transformation of the dependent variable and then create a regression model.
 * Create a model with lower number of features (remove highly correlated features).
 * Look for possible outliers/leverage points (based on the residuals vs leverage plot - cook's distance) and remove them to see changes in the model output. 
+* We can use Box-Cox transformation to identify the best possible transformation of y to regress on . This is usually done to handle the points deviating a bit from the normal Q-Q plot.
+
+```{r}
+# Box Cox Transformation (we can try this out to find the best possible function of y to regress on , the value of lambda is determined through MLE)
+bc<-boxcox(lmodel_1, lambda =seq(-3,3))
+#extract the best lambda 
+best.lam<-bc$x[which(bc$y==max(bc$y))]
+
+```
+# Observations: 
+Since , the above graph gives us a value of $\lambda \approx 0$ , therefore taking a log transformation of the dependent variable y makes more sense. 
 
 ```{r}
 # Taking log transformation of the dependent variable with all features
@@ -109,7 +121,7 @@ crime_rate_pred<- exp(crime_rate_pred)
 print(paste("Predicted Value:", round(crime_rate_pred,2)))
 ```
 Although the $R^{2}$ takes a slight dip , but it appears that the model assumptions are better satisfied here .\ 
-Points 11,19,46 seems to have around 1.5*standard deviation , thus these could be tested as potential outliers.
+Points 11,19,46 seems to have around 1.5*standard deviation , thus these could be tested as potential outliers/influential points.
 
 ```{r}
 # Taking log transformation of the dependent variable with all features
