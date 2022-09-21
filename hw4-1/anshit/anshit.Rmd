@@ -1,0 +1,22 @@
+---
+title: "Homework-4"
+author: "Anshit Verma"
+date: "28-09-2022"
+---
+
+## Question 8.1
+
+### Example: Real Estate Price
+
+Linear Regression models find use case in the real estate industry to predict selling price for a particular property depending on the prediction variables.
+
+**Objective Function (Y)**: To predict the selling price of a preperty based in the predicting variables for that property
+**Predicting Variables (X_i)**: Some of the key predicting variables are given below - 
+
+- ***Location***: The location of the property is an important predictor for predicting the selling price. As properties in a good neighborhood will fetch higher prices than those in a relatively worse neighborhoods.
+
+- ***Lot Size***: Lot size is defined as the area of the property. A large lot size is worth more than a smaller lot.
+
+- ***Age of the House (Condition)***: Age of the house is the number of years since the construction of the house. It can also be considered as the condition metric of the house. A house with good condition grade can worth more than one with lower condition grade as it might incure lower maintenance cost.
+
+- ***Garage Capacity***: Capacity of garage is defines as the number of cars a garage can hold. The ability of the garage to hold more cars is an important factor which appreciates the value of a property
