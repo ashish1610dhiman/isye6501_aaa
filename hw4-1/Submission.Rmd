@@ -1,5 +1,5 @@
 ---
-title: "Submission HW2"
+title: "Submission HW4"
 output:
   html_document:
     df_print: paged
@@ -25,6 +25,7 @@ library(qqplotr)
 library(cowplot)
 library(reshape2)
 library(grid)
+library(MASS)
 ```
 
 ```{bash}
@@ -271,7 +272,7 @@ plot(crime_data$Po1 ~ crime_data$Crime)
 
 [**#Analysis**]{style="color:red"}
 
-From the aove plot we can observe that there seems to be a linear relationship between the dependent variable and one of the highly correlated feature. Thus our assumption of linearity holds true and we can implement linear regression model.
+From the above plot we can observe that there seems to be a linear relationship between the dependent variable and one of the highly correlated feature.
 
 ###Initial Model
 
@@ -300,16 +301,27 @@ Based on the model output , it appears that the features Ed, Ineq, Prob, M, Po1 
 
 * For this model, the $R^{2}$ value is 0.8 which means that 80% of the variance in the dependent variable is explained by the set of these independent variables .\
 
-* The predicted crime_rate for the given data point is `r crime_rate_pred`. Since this prediction lies outside the range of or dependent variable, we can further tune the model as the features of the predicting data point lie withing the domain of independent variables. \
+* The predicted crime_rate for the given data point is `r crime_rate_pred`. We noticed that this prediction lies outside the range of our dependent variable, and we decided to further tune our model and observe the changes. \
 
-* From the 4 diagnostic plots associated with the linear regression model, we can see that the assumptions are mostly in place, error terms are normally distributed i.e. constant variance assumption and residuals are homogeneous around the fitted line. However , we can see slight bends in the left and right end in the plot of residuals vs fitted values. Thus, a possible remedy can be thought of as transforming the dependent variable (taking a log transformation reduces the range of possible variables).
+* From the 4 diagnostic plots associated with the linear regression model , we can see that the assumptions are mostly in place although there are some slight deviations, error terms are normally distributed (deviation for a couple of points) and residuals are homogeneous around the fitted line (no heteroskedasticity). However , we can see slight bends in the left and right end in the plot of residuals vs fitted values. Thus , a possible remedy can be thought of as modeling the log of dependent variable based on independent variable. (because taking a log transformation reduces the range of possible variables).\
 
-* Further from the QQ Plot it can be inferred that the data is normally distributed. Thus our normality assumption also holds true.
+* Further from the QQ Plot it can be inferred that the data is mostly normally distributed (deviation for a couple of points) . Thus our normality assumption mostly holds true. However , we have also tried out box cox transformation technique to determine the best transformed y to regress on so that normality assumptions hold true for a couple of deviating points too.\
 
 **Points for further exploration** : 
-* Taking a log transformation of the dependent variable and then create a regression model.
-* Create a model with lower number of features (remove highly correlated features).
-* Look for possible outliers/leverage points (based on the residuals vs leverage plot - cook's distance) and remove them to see changes in the model output. 
+* Taking a log transformation of the dependent variable and then create a regression model.\
+* Create a model with lower number of features (remove highly correlated features).\
+* Look for possible outliers/leverage points (based on the residuals vs leverage plot - cook's distance) and remove them to see changes in the model output.\ 
+* We can use Box-Cox transformation to identify the best possible transformation of y to regress on . This is usually done to handle the points deviating a bit from the normal Q-Q plot.\
+
+```{r}
+# Box Cox Transformation (we can try this out to find the best possible function of y to regress on , the value of lambda is determined through MLE)
+bc<-boxcox(lmodel_1, lambda =seq(-3,3))
+#extract the best lambda 
+best.lam<-bc$x[which(bc$y==max(bc$y))]
+
+```
+# Observations: 
+Since , the above graph gives us the best value of $\lambda$ to be around 0 only , therefore taking a log transformation of the dependent variable y makes more sense. 
 
 ###Taking log transformation of the dependent variable with all features
 
@@ -389,4 +401,4 @@ print(paste("Predicted Value:", round(crime_rate_pred,2)))
 
 [**#Analysis**]{style="color:red"}
 
-* As we can observe that after removing the potential outliers, there is no change in the model. Thus we can conclude that our assumption to classify the removed points as outliers is wrong.
+* As we can observe that after removing the potential outliers, there is no major change in the model. Thus we can conclude that our assumption to classify the removed these set of points as outliers maybe not be correctly justified.
