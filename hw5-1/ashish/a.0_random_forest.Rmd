@@ -1,0 +1,159 @@
+---
+title: "Random Forest | Ques 10.1"
+author: "Ashish Dhiman"
+date: "2022-09-26"
+output: html_document
+---
+
+```{bash}
+ls ../
+```
+
+```{r, warning=FALSE}
+library(randomForest)
+```
+
+```{r}
+crime_df = read.table("../uscrime.txt", sep="\t", header= TRUE)
+dim(crime_df)
+```
+
+#### Data and variable meaning:
+
+Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
+
+| Variable | Description                                                                            |
+|-----------------|-------------------------------------------------------|
+| M        | percentage of males aged 14--24 in total state population                              |
+| So       | indicator variable for a southern state                                                |
+| Ed       | mean years of schooling of the population aged 25 years or over                        |
+| Po1      | per capita expenditure on police protection in 1960                                    |
+| Po2      | per capita expenditure on police protection in 1959                                    |
+| LF       | labour force participation rate of civilian urban males in the age-group 14-24         |
+| M.F      | number of males per 100 females                                                        |
+| Pop      | state population in 1960 in hundred thousands                                          |
+| NW       | percentage of nonwhites in the population                                              |
+| U1       | unemployment rate of urban males 14--24                                                |
+| U2       | unemployment rate of urban males 35--39                                                |
+| Wealth   | wealth: median value of transferable assets or family income                           |
+| Ineq     | income inequality: percentage of families earning below half the median income         |
+| Prob     | probability of imprisonment: ratio of number of commitments to number of offenses      |
+| Time     | average time in months served by offenders in state prisons before their first release |
+| Crime    | crime rate: number of offenses per 100,000 population in 1960                          |
+
+#Vanilla RF model
+
+```{r}
+lapply(crime_df, class)
+```
+
+```{r}
+crime_df$So <- factor(crime_df$So)
+```
+
+```{r}
+rf_model_v0 = randomForest(Crime ~ ., data = crime_df)
+summary(rf_model_v0)
+```
+
+```{r}
+rf_model_v0
+```
+
+```{r}
+rmse_func = function(true,predicted){
+  (mean((true-predicted)^2))**0.5
+}
+
+rmse_func(true = crime_df$Crime, predicted=rf_model_v0$predicted)
+```
+
+```{r}
+rf_model_v1 = randomForest(Crime ~ ., data = crime_df, ntree = 100)
+rmse_func(true = crime_df$Crime, predicted=rf_model_v1$predicted)
+```
+
+```{r}
+rf_model_v2 = randomForest(log(Crime) ~ ., data = crime_df, ntree = 100)
+rmse_func(true = crime_df$Crime, predicted=exp(rf_model_v2$predicted))
+```
+
+```{r}
+varImpPlot(rf_model_v2)
+```
+
+```{r}
+rmse_list = sapply(seq(100,1000,20), function(x)  rmse_func(true = crime_df$Crime, predicted=randomForest(Crime ~ ., data = crime_df, ntree = x)$predicted))
+plot(x=seq(100,1000,20), y=rmse_list, main = "MSE vs ntrees")
+```
+
+```{r}
+rmse_list = sapply(seq(2,8,1), function(x)  rmse_func(true = crime_df$Crime, predicted=randomForest(Crime ~ ., data = crime_df, mtry = x)$predicted))
+plot(x=seq(2,8,1), y=rmse_list,main="RMSE vs varaibles split")
+```
+
+```{r}
+rmse_list = sapply(seq(200,1000,20), function(x)  rmse_func(true = crime_df$Crime, predicted=randomForest(Crime ~ ., data = crime_df, ntree = x, mtry=3)$predicted))
+plot(x=seq(200,1000,20), y=rmse_list, main = "MSE vs ntrees")
+```
+
+```{r}
+rf_model_v3 = randomForest(Crime ~ ., data = crime_df, ntree = 250, mtry=3, proximity = TRUE)
+rf_model_v3
+```
+
+```{r}
+prox1=rf_model_v3$proximity
+```
+
+### CV
+
+```{r}
+n_folds = 5
+folds <- sample(rep(1:n_folds, length.out = nrow(crime_df)), size = nrow(crime_df), replace = F)
+
+table(folds)
+```
+
+```{r}
+rmse_func = function(true,predicted){
+  return (mean((true-predicted)^2)**0.5)
+}
+
+
+CV_rf_func = function(test_fold, ntree1, mtry1){
+  model <- randomForest(Crime ~ ., data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  #print(model$ntree)
+  preds <- predict(model,  crime_df[folds == test_fold,])
+  return(rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds))
+}
+```
+
+```{r}
+rmse_list=c()
+
+for (ntree_i in seq(10,400,50)) {
+  for (mtry_i in seq(2,15,1)) {
+    #RMSE on each CV Fold for ntree_i,mtry_i
+    rmse_cv = mean(unlist(lapply(seq(1:5), function(fold) 
+      CV_rf_func(test_fold = fold, ntree1 = ntree_i, mtry1 = mtry_i))))
+    print (paste("For tree:",ntree_i,"mtry:",mtry_i,"rmse:",rmse_cv))
+    rmse_list = c(rmse_list, rmse_cv)
+}
+}
+
+rmse_df = cbind.data.frame(seq(10,400,50),seq(2,15,1),rmse_list)
+```
+
+```{r}
+names(rmse_df) = c("ntree","mtry","rmse")
+```
+
+```{r}
+rmse_df[which.min(rmse_df$rmse),]
+```
+
+```{r}
+summary(rmse_df$rmse)
+```
