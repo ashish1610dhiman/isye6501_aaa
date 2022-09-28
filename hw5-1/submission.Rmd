@@ -15,6 +15,8 @@ date: "2022-09-04"
 
 -   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
 
+**Q10.1**
+
 [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
 ```{r, warning=FALSE, message=FALSE}
@@ -263,7 +265,7 @@ for (ntree_i in seq(30,130,10)) {
     rmse_cv1 = mean(unlist(rmse_cv_df[,1]))
     rmse_cv2 = mean(unlist(rmse_cv_df[,2]))
     rmse_cv3 = mean(unlist(rmse_cv_df[,3]))
-    print (paste("For tree:",ntree_i,"mtry:",mtry_i))
+    #print (paste("For tree:",ntree_i,"mtry:",mtry_i))
     rmse_list1 = c(rmse_list1, rmse_cv1)
     rmse_list2 = c(rmse_list2, rmse_cv2)
     rmse_list3 = c(rmse_list3, rmse_cv3)
@@ -348,3 +350,5 @@ From the variable importance plot we see, that the following variable feature ve
 Note: while the above 3 variables are also significant features here is the variable importance of variable "Pop". While this variable is very important for Decision trees, it is not that important for Random Forest. One possible reason for this could be the notion of randomness involved in RF.
 
 Another point to note here is that after Hyperparameter tuning, Decision tree is giving lower RMSE, and is most likely over-fitting the data-set, in comparison to Random Forest, and if we had a test data, RF model would most likely perform better, because of better generalization.
+
+**Q10.2**
