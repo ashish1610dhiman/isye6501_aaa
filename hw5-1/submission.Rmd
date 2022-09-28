@@ -1,0 +1,350 @@
+---
+title: "ISYE 6501"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+date: "2022-09-04"
+---
+
+# Submission HW4 \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
+
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+```{r, warning=FALSE, message=FALSE}
+set.seed(77)
+
+library(randomForest)
+library(ggplot2)
+library(cowplot)
+library(ggplot2)
+library(reshape2)
+library(grid)
+library(MASS)
+library(rpart)
+library(rpart.plot)
+```
+
+```{r}
+crime_data<-read.table(file = "./uscrime.txt", sep = "\t",header=TRUE)
+head(crime_data)
+dim(crime_data)
+summary(crime_data)
+```
+
+## EDA
+
+### Data Distribution and Pairwise Corelation
+
+```{r}
+my_plots <- lapply(names(crime_data), function(var_x){
+  p <- 
+    ggplot(crime_data) +
+    aes_string(var_x)
+
+  if(var_x %in% list("So")) {
+    p <- p + geom_bar()
+
+  } else {
+    p <- p + geom_density()
+  } 
+
+})
+
+plot_grid(plotlist = my_plots)
+
+### Correlation
+cormat <- round(cor(crime_data),2)
+cormat[upper.tri(cormat)] <- NA
+melted_cormat <- melt(cormat)
+# plotting the correlation heatmap
+
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var1, Var2, label = value),
+          color = "white", size = 3)
+```
+
+## Decision Tree
+
+#### Training and evaluating on the same training dataset (not a good method for generalizing) , better to do cross validation
+
+```{r}
+# Vanilla decision tree with a fixed value of complexity parameter of 0.01 and minsplit of 20
+reg_tree<-rpart(Crime~.,data=crime_data,method="anova",control=c(cp=0.01,minsplit=20))
+rmse<-sqrt(sum((crime_data$Crime - predict(reg_tree,type=c("vector")))**2)/nrow(crime_data))
+rmse
+```
+
+```{r}
+rpart.plot(reg_tree)
+```
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+-   Observations & Points for further exploration:
+
+-   The above decision tree uses 3 variables NW , Pop, LF and Po1 to create a decision tree. (2 of them Pop and Po1 have a linear correlation with dependent variable i.e. Crime)
+
+-   One food for thought is that this is a regression tree and we are imputing the mean values of all the points that fall in a leaf or terminal node , so incase if we have an outlier , then those will drive the value of mean and hence cause higher RMSE or SSE. So , it would be good to see the effect of removing or capping outliers and then performing decision tree.
+
+-   The smaller the value of complex parameter , the model is expected to have high variance as a split would be performed if we get such a marginal increase in entropy . Therefore , to prevent our model from overfitting amd having high variance , it is better if we not choose too small values of cp i.e. complexity parameter.
+
+-   The default value of max depth parameter here is 30 but given that we have only 47 nodes in our dataset , it dfoes not make much sense to have tree models greater than or equal to 3 or 4 levels of depth
+
+-   minsplit hyperparameter : The default value of this parameter is 20 i.e. a split would be performed if we have atleast 20 datapoints in a node , although it is generally good to have higher values of "minsplit" parameter to avoid overfitting but since in this problem statement , the total \# of datapoints is only 47 , so this is one parameter where we can tweak in a bit .
+
+-   minbucket hyperparameter : Similarly , this hyperparameter means the number of datpoints in a terminal node and thus here also , it makes sense to have a smaller value for this hyperparameter as we do not have large dataset for training our model.
+
+#### Perform hyperparameter tuning minsplit and cp(complexity hyperparameter)
+
+```{r}
+folds <- sample(rep(1:5, length.out = nrow(crime_data)), size = nrow(crime_data), replace = F)
+pred_table<-data.frame(min_split=numeric(0),cp=double(0),rmse=double(0))
+for(j in seq(0.001,0.02,0.001)){
+for(i in seq(5,25,2)){
+  CV_mse <- lapply(1:5, function(x){ #5 corresponds to the number of folds defined earlier
+  model <- rpart(Crime ~ ., data = crime_data[folds != x,],method="anova",control=c(minsplit=i,cp=j))
+  preds <- predict(model,  crime_data[folds == x,], type="vector")
+  sum_sse<-sum((crime_data[folds==x,"Crime"]-preds)**2)
+  rmse<-sqrt(sum_sse/nrow(crime_data[folds==x,]))
+  #total_rmse<-total_rmse+rmse
+  return(rmse)
+   })
+pred_table[nrow(pred_table)+1,]=c(i,j,mean(unlist(CV_mse)))
+}
+}
+```
+
+# Identifying the optimal value of the hyperparameters cp and min_split
+
+```{r}
+options(scipen=999)
+pred_table[which.min(pred_table$rmse),c("min_split","cp")]
+```
+
+-   From the above output , we get the the optimal value of cp as 0.001 and min_split as 15
+
+```{r}
+reg_cv_tree<-rpart(Crime~.,data=crime_data,method="anova",control=c(cp=0.001,minsplit=15))
+rpart.plot(reg_cv_tree)
+```
+
+-   [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+-   Note: The above set of optimal parameters reproduces the same decision tree that we had done initially with fixed values of these 2 parameters.This can be because of less \# of datapoints. We can try reducing the number of minsplits which will lead to a higher variance model and we can try iterating to get the optimal maxDepth hyperparameter.
+
+```{r}
+pred_table<-data.frame(min_split=numeric(0),maxDepth=double(0),rmse=double(0))
+for(j in seq(2,15,1)){
+for(i in seq(5,25,2)){
+  CV_mse <- lapply(1:5, function(x){ #5 corresponds to the number of folds defined earlier
+  model <- rpart(Crime ~ ., data = crime_data[folds != x,],method="anova",control=c(minsplit=i,maxdepth=j))
+  preds <- predict(model,  crime_data[folds == x,], type="vector")
+  sum_sse<-sum((crime_data[folds==x,"Crime"]-preds)**2)
+  rmse<-sqrt(sum_sse/nrow(crime_data[folds==x,]))
+  #total_rmse<-total_rmse+rmse
+  return(rmse)
+   })
+pred_table[nrow(pred_table)+1,]=c(i,j,mean(unlist(CV_mse)))
+}
+}  
+#rpart.plot(rpart(Crime ~ ., data = crime_data,method="anova",minsplit=10,cp=0.01))
+#plot(pred_table)
+```
+
+-   [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+-   Identifying the optimal value of the hyperparameter maxDepth (which comes out to be around 2 with min_split within range of 5-15 (rmse is same for different values of min_split))
+
+```{r}
+options(scipen=999)
+pred_table[which.min(pred_table$rmse),c("maxDepth")]
+```
+
+```{r}
+reg_tree_final<-rpart(Crime~.,data=crime_data,method="anova",control=c(cp=0.001,minsplit=15,maxdepth=2))
+rmse_final<-sqrt(sum((crime_data$Crime - predict(reg_tree_final,type=c("vector")))**2)/nrow(crime_data))
+rmse_final
+```
+
+**Conclusion : The RMSE value for the decision tree model using the optimal values of the hyperparameter is `r round(rmse_final,2)`**
+
+## Random Forest
+
+```{r}
+crime_df <- crime_data
+crime_df$So <- factor(crime_df$So)
+```
+
+### Build Vanilla RF model
+
+```{r}
+rf_model_v0 = randomForest(Crime ~ ., data = crime_df, importance=TRUE)
+summary(rf_model_v0)
+
+rmse_func = function(true,predicted){
+  (mean((true-predicted)^2))**0.5
+}
+
+rmse_func(true = crime_df$Crime, predicted=rf_model_v0$predicted)
+
+varImpPlot(rf_model_v0,sort = TRUE)
+```
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+From variable importance we can see that the some variables like, So, U1 and U2 are not very helpful. Hence it might serve us better to drop these variables, bcos they might add more noise to our model instead of actual information capture. In the CV stage below, we will test the models without these variables.
+
+Variable Importance here is given basis two metrics, drop in MSE when the variable is not included in feature set, and second the Information gain (or purity) of a node, if the variable is used to split it.
+
+```{r}
+rf_model_v1 = randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, importance = TRUE)
+varImpPlot(rf_model_v1)
+```
+
+### Build RF and tune hyperparams with CV
+
+#### Build CV folds
+
+```{r}
+n_folds = 5
+folds <- sample(rep(1:n_folds, length.out = nrow(crime_df)), size = nrow(crime_df), replace = F)
+
+table(folds)
+```
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+We have created uniform CV folds here.
+
+#### Function for RF on CV fold
+
+```{r}
+CV_rf_func = function(test_fold, ntree1, mtry1){
+  model1 <- randomForest(Crime ~ ., data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  model2 <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  model3 <- randomForest(Crime ~ . -U1 -U2 -Time, data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  
+  preds1 <- predict(model1,  crime_df[folds == test_fold,])
+  preds2 <- predict(model2,  crime_df[folds == test_fold,])
+  preds3 <- predict(model3,  crime_df[folds == test_fold,])
+  
+  rmse1 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds1)
+  rmse2 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds2)
+  rmse3 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds3)
+  
+  return(c(rmse1,rmse2,rmse3))
+}
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+rmse_list1=c()
+rmse_list2=c()
+rmse_list3=c()
+ntree_list=c()
+mtry_list=c()
+
+for (ntree_i in seq(30,130,10)) {
+  for (mtry_i in seq(2,6,1)) {
+    #RMSE on each CV Fold for ntree_i,mtry_i
+    rmse_cv_all = lapply(seq(1:5), function(fold) 
+      CV_rf_func(test_fold = fold, ntree1 = ntree_i, mtry1 = mtry_i))
+    rmse_cv_df = do.call(rbind.data.frame, rmse_cv_all)
+    rmse_cv1 = mean(unlist(rmse_cv_df[,1]))
+    rmse_cv2 = mean(unlist(rmse_cv_df[,2]))
+    rmse_cv3 = mean(unlist(rmse_cv_df[,3]))
+    print (paste("For tree:",ntree_i,"mtry:",mtry_i))
+    rmse_list1 = c(rmse_list1, rmse_cv1)
+    rmse_list2 = c(rmse_list2, rmse_cv2)
+    rmse_list3 = c(rmse_list3, rmse_cv3)
+    ntree_list = c(ntree_list, ntree_i)
+    mtry_list = c(mtry_list, mtry_i)
+}
+}
+```
+
+```{r}
+rmse_df = cbind.data.frame(ntree_list,mtry_list,
+                           rmse_list1,rmse_list2,rmse_list3)
+names(rmse_df)=c("ntree","mtry","rmse_model1","rmse_model2","rmse_model3")
+```
+
+```{r}
+rmse_df
+```
+
+### Let us study the impact of these two hyper-parameters on RMSE
+
+```{r}
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model1, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+
+
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model2, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model3, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+```
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+Because our data is so small; the effect of ntree and mtry is very sporadic, with high interaction between them. Also the trend varies as per the choice of the model(i.e the choice of predictors).
+
+Ideally we would have expected the RMSE to exhibit a 'U' shaped trend with out hyper parameters, where adding complexity to model (i.e. more num of trees to average upon or more features to split nodes upon) first decreases RMSE, but after a point it starts overfitting, and RMSE starts increasing again.
+
+```{r}
+print ("Min RMSE model 1")
+rmse_df[which.min(rmse_df[,"rmse_model1"]),]
+
+print ("Min RMSE model 2")
+rmse_df[which.min(rmse_df[,"rmse_model2"]),]
+
+print ("Min RMSE model 3")
+rmse_df[which.min(rmse_df[,"rmse_model3"]),]
+```
+
+### Best Model is therefore given for:
+
+1.  Dropping variables: U1, M.F and U2
+2.  number of trees = 40
+3.  mtry = 4
+
+Not only thus by RMSE, but by intution too this is a simpler model since it has lesser features, lower number of trees, as well as lower number of features to split on in RF.
+
+Using the above hyper-parameters we can build the best model on full data.
+
+```{r}
+rf_final_model <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, ntree = 40, mtry=4, importance = TRUE)
+rmse_func(true=crime_df$Crime,predicted = rf_final_model$predicted)
+```
+
+```{r}
+varImpPlot(rf_final_model)
+```
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+From the variable importance plot we see, that the following variable feature very highly in Importance:
+
+1.  Po2
+2.  NW
+3.  Prob
+
+### Comparison between Decision Tree and Random Forest
+
+[**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
+
+Note: while the above 3 variables are also significant features here is the variable importance of variable "Pop". While this variable is very important for Decision trees, it is not that important for Random Forest. One possible reason for this could be the notion of randomness involved in RF.
+
+Another point to note here is that after Hyperparameter tuning, Decision tree is giving lower RMSE, and is most likely over-fitting the data-set, in comparison to Random Forest, and if we had a test data, RF model would most likely perform better, because of better generalization.
