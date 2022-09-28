@@ -19,7 +19,6 @@ date: "2022-09-04"
 
 ## Question 10.1
 
-
 ```{r, warning=FALSE, message=FALSE}
 set.seed(77)
 
@@ -323,14 +322,14 @@ rmse_df[which.min(rmse_df[,"rmse_model3"]),]
 
 1.  Dropping variables: U1, M.F and U2
 2.  number of trees = 40
-3.  mtry = 4
+3.  mtry = 3
 
 Not only thus by RMSE, but by intution too this is a simpler model since it has lesser features, lower number of trees, as well as lower number of features to split on in RF.
 
 Using the above hyper-parameters we can build the best model on full data.
 
 ```{r}
-rf_final_model <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, ntree = 40, mtry=4, importance = TRUE)
+rf_final_model <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, ntree = 40, mtry=3, importance = TRUE)
 rmse_func(true=crime_df$Crime,predicted = rf_final_model$predicted)
 ```
 
@@ -346,6 +345,8 @@ From the variable importance plot we see, that the following variable feature ve
 2.  NW
 3.  Prob
 
+If we want we can still test if drop the lowest variables: Time and Pop is helpful.
+
 ### Comparison between Decision Tree and Random Forest
 
 [**#Analysis**]{style="color:red"}
@@ -355,7 +356,6 @@ Note: while the above 3 variables are also significant features here is the vari
 Another point to note here is that after Hyperparameter tuning, Decision tree is giving lower RMSE, and is most likely over-fitting the data-set, in comparison to Random Forest, and if we had a test data, RF model would most likely perform better, because of better generalization.
 
 ## Question 10.2
-
 
 ## Question 10.3
 
@@ -386,7 +386,6 @@ summary(german_data)
 
 We can see that the data is uniformly distributed, both for the numerical features as well as categorical features.
 
-
 ```{r}
 par(mfrow=(c(1,2)))
 plot(german_data$V5)
@@ -394,7 +393,6 @@ plot(german_data$V2)
 ```
 
 2 features have suspiciously large max values (comparing to the 3rd quartile).
-
 
 ```{r}
 # (1 = Good, 2 = Bad) -> (0 = Good, 1 = Bad)
@@ -442,7 +440,6 @@ model
 summary(model)
 ```
 
-
 ```{r}
 get_roc_plot_and_auc = function(model, test){
   p <- predict(model, newdata=test[, 1:(length(test)-1)], type="response")
@@ -462,11 +459,9 @@ plot(roc$prf)
 roc$auc
 ```
 
-
 [**#Analysis**]{style="color:red"}
 
 As we can see that AUC value is 0.7846446 that is close to 1. Hence our model is above average in being able to separate between classes.
-
 
 ```{r}
 predicted = ifelse(roc$prediction > 0.5,1,0)
@@ -491,24 +486,20 @@ drops <- c("V7","V17", "V11", "V13", "V16", "V12")
 drop.features = drop.features[ , !(names(drop.features) %in% drops)]
 ```
 
-
 ```{r}
 df.list.1 = split_data(drop.features)
 train.1 = df.list.1$train
 test.1 = df.list.1$test
 ```
 
-
 ```{r}
 model.1 <- glm(V21 ~.,family=binomial(link='logit'),data=train.1)
 model.1
 ```
 
-
 ```{r}
 summary(model.1)
 ```
-
 
 ```{r}
 roc.1 = get_roc_plot_and_auc(model.1, test.1)
@@ -518,7 +509,7 @@ roc.1$auc
 
 [**#Analysis**]{style="color:red"}
 
-We can observe that dropping statistically insignificant features help us achieve a higher AUC value. Hence this increases our model's ability to separate between the classes.
+We can observe that dropping statistically insignificant features help us achieve a higher AUC value, which translates to a better risk discrimination. In other words, this increases our model's ability to separate between the classes.
 
 ```{r}
 predicted.1 = ifelse(roc.1$prediction > 0.5,1,0)
@@ -551,7 +542,7 @@ get_recall_and_precision = function(cor){
 
 [**#Analysis**]{style="color:red"}
 
-We can use the F-Beta value for determining the best value of threshold. As we are given that a classifying a "bad" customer as "good" is 5 times worse than classifying "good" customer as "bad". We need to determine the best value of threshold that will help us increase recall and accordingly lower the value of false negatives (positive class is 1 i.e. "bad").
+We can use the F-Beta value for determining the best value of threshold. As we are given that a classifying a "bad" customer as "good" is 5 times worse than classifying "good" customer as "bad". We need to determine the best value of threshold that will help us increase recall (positive class is 1 i.e. "bad").
 
 ```{r}
 rp.df = data.frame("threshold"=double(), "recall"=double(), "precision"=double(), f_beta=double())
@@ -569,10 +560,21 @@ for(i in seq(0, 100, 1)){
 
 We are using F2 specifically which helps us weight recall more than precision. Since we want to maximize recall and minimize false negative due to higher cost associated with it, F2 will help us determine the best threshold value. Since F2 can range from 0 to 2, the higher the value of F2 - the better the threshold to minimize false negative.
 
-
 ```{r}
 rp.df
 ```
+
+```{r}
+ggplot(rp.df, aes(threshold)) + 
+  geom_line(aes(y = precision, colour = "precision")) + 
+  geom_line(aes(y = recall, colour = "recall"))
+```
+
+[**#Analysis**]{style="color:red"}
+
+As expected, decreasing threshold, makes it easier to classify data points as bad, and so our recall value increases. On the other hand, because on longer threshold, we might no longer be tagging the actual bads, our model precision decreases.
+
+Also the Precision and Recall curver intersect somewhere between 0.3 to 0.4, which is near the bad rate in our dataset.
 
 ```{r}
 # Max value of F Beta Score
@@ -590,8 +592,13 @@ points(x=rp.df$threshold[which.max(rp.df$f_beta)], y=rp.df$f_beta[which.max(rp.d
 
 We can see from the above plot that best value that minimizes false negatives is 0.11.
 
-
 ### Determining Threshold by Calculating Error Rate
+
+$$
+Error Rate^* = \frac{5.FP}{TP+FP+FN+TN} + \frac{FN}{TP+FP+FN+TN}
+$$
+
+\*Note we are deviating here from conventional deviation of error rate, in order to better apply to our use case.
 
 ```{r}
 get_cm_value = function(cor){
@@ -606,8 +613,7 @@ get_cm_value = function(cor){
 
 [**#Analysis**]{style="color:red"}
 
-Another way determine the threshold is by calculating the error value by weighing the false negatives more than false positive. As we know that false negatives are 5 time more costly than false positive, we can use that information while calculating our error value.
-We need to choose the value of threshold which minimizes the error. 
+Another way determine the threshold is by calculating the error value by weighing the false negatives more than false positive. As we know that false negatives are 5 time more costly than false positive, we can use that information while calculating our error value. We need to choose the value of threshold which minimizes the error.
 
 ```{r}
 ## Minimizing the error
@@ -623,7 +629,6 @@ for(i in seq(0, 100, 1)){
   error.df[nrow(error.df)+1,] = c("threshold"=i/100, "error"=total_error)
 }
 ```
-
 
 ```{r}
 error.df[which.min(error.df$error),]
@@ -646,14 +651,14 @@ final.cor = confusionMatrix(data=as.factor(final.predicted), reference=as.factor
 final.cor
 ```
 
-
 ```{r}
 final.cor$byClass
 ```
 
 [**#Analysis**]{style="color:red"}
 
-By choosing our threshold to be 0.11, we can achieve a recall value of 0.91. While our precision has gone down, we are not making mistakes with false negatives which are more costly to us.
+By choosing our threshold to be 0.11, we can achieve a recall value of 0.91, which implies if there are 100 "bad" points we are able to capture 91 of those.
 
-In our test data, the no. of "bad" classified data points was ~33%. We were able to achieve a threshold value of 0.11 which is 1/3rd of that value.
+It is also interesting to note here, that the we have \~33% "bad" data points. We
 
+In our test data, the no. of "bad" classified data points was \~33%. We were able to achieve a threshold value of 0.11 which is 1/3rd of that value.
