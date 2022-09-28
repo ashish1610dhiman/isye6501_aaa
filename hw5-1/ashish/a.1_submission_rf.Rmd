@@ -7,9 +7,10 @@ output: html_document
 
 ### Read Data
 
-```{r}
+```{r, warning=FALSE}
 set.seed(77)
 library(randomForest)
+library(ggplot2)
 
 crime_df = read.table("../uscrime.txt", sep="\t", header= TRUE)
 dim(crime_df)
@@ -45,7 +46,7 @@ crime_df$So <- factor(crime_df$So)
 ### Build Vanilla RF model
 
 ```{r}
-rf_model_v0 = randomForest(Crime ~ ., data = crime_df)
+rf_model_v0 = randomForest(Crime ~ ., data = crime_df, importance=TRUE)
 summary(rf_model_v0)
 
 rmse_func = function(true,predicted){
@@ -54,13 +55,13 @@ rmse_func = function(true,predicted){
 
 rmse_func(true = crime_df$Crime, predicted=rf_model_v0$predicted)
 
-varImpPlot(rf_model_v1,sort = TRUE)
+varImpPlot(rf_model_v0,sort = TRUE)
 ```
 
-From variable importance we can see that the some variables like, Ineq, So and Pop are not very helpful. In the CV stage below, we will test models without these variables.
+From variable importance we can see that the some variables like, So, U1 and U2 are not very helpful. Hence it might serve us better to drop these variables, bcos they might add more noise to our model instead of actual information capture. In the CV stage below, we will test the models without these variables.
 
 ```{r}
-rf_model_v1 = randomForest(Crime ~ . -Ineq -U1, data = crime_df, importance = TRUE)
+rf_model_v1 = randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, importance = TRUE)
 varImpPlot(rf_model_v1)
 ```
 
@@ -83,9 +84,9 @@ We have created uniform CV folds here
 CV_rf_func = function(test_fold, ntree1, mtry1){
   model1 <- randomForest(Crime ~ ., data = crime_df[folds != test_fold,],
                         ntree = ntree1, mtry=mtry1)
-  model2 <- randomForest(Crime ~ . -Ineq -U1, data = crime_df[folds != test_fold,],
+  model2 <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df[folds != test_fold,],
                         ntree = ntree1, mtry=mtry1)
-  model3 <- randomForest(Crime ~ . -Ineq - Pop - U2, data = crime_df[folds != test_fold,],
+  model3 <- randomForest(Crime ~ . -U1 -U2 -Time, data = crime_df[folds != test_fold,],
                         ntree = ntree1, mtry=mtry1)
   
   preds1 <- predict(model1,  crime_df[folds == test_fold,])
@@ -105,9 +106,11 @@ CV_rf_func = function(test_fold, ntree1, mtry1){
 rmse_list1=c()
 rmse_list2=c()
 rmse_list3=c()
+ntree_list=c()
+mtry_list=c()
 
 for (ntree_i in seq(30,130,10)) {
-  for (mtry_i in seq(2,12,1)) {
+  for (mtry_i in seq(2,6,1)) {
     #RMSE on each CV Fold for ntree_i,mtry_i
     rmse_cv_all = lapply(seq(1:5), function(fold) 
       CV_rf_func(test_fold = fold, ntree1 = ntree_i, mtry1 = mtry_i))
@@ -119,12 +122,14 @@ for (ntree_i in seq(30,130,10)) {
     rmse_list1 = c(rmse_list1, rmse_cv1)
     rmse_list2 = c(rmse_list2, rmse_cv2)
     rmse_list3 = c(rmse_list3, rmse_cv3)
+    ntree_list = c(ntree_list, ntree_i)
+    mtry_list = c(mtry_list, mtry_i)
 }
 }
 ```
 
 ```{r}
-rmse_df = cbind.data.frame(seq(30,130,10),seq(2,12,1),
+rmse_df = cbind.data.frame(ntree_list,mtry_list,
                            rmse_list1,rmse_list2,rmse_list3)
 names(rmse_df)=c("ntree","mtry","rmse_model1","rmse_model2","rmse_model3")
 ```
@@ -132,6 +137,26 @@ names(rmse_df)=c("ntree","mtry","rmse_model1","rmse_model2","rmse_model3")
 ```{r}
 rmse_df
 ```
+
+### Let us study the impact of these two hyper-parameters on RMSE
+
+#### Impact of ntree
+
+```{r}
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model1, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+
+
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model2, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+
+ggplot(rmse_df[rmse_df$mtry<4,], aes(x = ntree, y = rmse_model3, group = mtry, color = mtry)) +
+  geom_point() + geom_line()
+```
+
+Because our data is so small; the effect of ntree and mtry is very sporadic, with high interaction between them. Also the trend varies as per the choice of the model(i.e the choice of predictors).
+
+Ideally we would have expected the RMSE to exhibit a 'U' shaped trend with out hyper parameters, where adding complexity to model (i.e. more num of trees to average upon or more features to split nodes upon) first decreases RMSE, but after a point it starts overfitting, and RMSE starts increasing again.
 
 ```{r}
 print ("Min RMSE model 1")
@@ -144,21 +169,35 @@ print ("Min RMSE model 3")
 rmse_df[which.min(rmse_df[,"rmse_model3"]),]
 ```
 
+As
+
 ### Best Model is therefore given for:
 
-1.  Dropping variables:
-2.  number of trees = 60
-3.  mtry = 5
+1.  Dropping variables: U1, M.F and U2
+2.  number of trees = 40
+3.  mtry = 4
 
 Not only thus by RMSE, but by intution too this is a simpler model since it has lesser features, lower number of trees, as well as lower number of features to split on in RF.
 
 Using the above hyper-parameters we can build the best model on full data.
 
 ```{r}
-rf_final_model <- randomForest(Crime ~ . -Ineq -Pop, data = crime_df, ntree = 40, mtry=3, importance = TRUE)
+rf_final_model <- randomForest(Crime ~ . -U1 -M.F -U2, data = crime_df, ntree = 40, mtry=4, importance = TRUE)
 rmse_func(true=crime_df$Crime,predicted = rf_final_model$predicted)
 ```
 
 ```{r}
 varImpPlot(rf_final_model)
 ```
+
+From the variable importance plot we see, that the following variable feature very highly in Importance:
+
+1.  Po2
+2.  NW
+3.  Prob
+
+### Comparison between Decision Tree and Random Forest
+
+Note: while the above 3 variables are also significant features here is the variable importance of variable "Pop". While this variable is very important for Decision trees, it is not that important for Random Forest. One possible reason for this could be the notion of randomness involved in RF.
+
+Another point to note here is that after Hyperparameter tuning, Decision tree is giving lower RMSE, and is most likely over-fitting the data-set, in comparison to Random Forest, and if we had a test data, RF model would most likely perform better, because of better generalization.
