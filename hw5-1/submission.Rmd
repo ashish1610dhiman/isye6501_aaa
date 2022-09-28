@@ -76,7 +76,7 @@ geom_text(aes(Var1, Var2, label = value),
 
 ### Decision Tree
 
-#### Training and evaluating on the same training dataset (not a good method for generalizing) , better to do cross validation
+#### Training and evaluating on the same training dataset (not a good method for generalizing) , better to do cross validation to get optimal hyperparameters. Splitting into training and testing set does not make sense here as we have only 47 datapoints.
 
 ```{r}
 # Vanilla decision tree with a fixed value of complexity parameter of 0.01 and minsplit of 20
@@ -95,11 +95,11 @@ rpart.plot(reg_tree)
 
 -   The above decision tree uses 3 variables NW , Pop, LF and Po1 to create a decision tree. (2 of them Pop and Po1 have a linear correlation with dependent variable i.e. Crime)
 
--   One food for thought is that this is a regression tree and we are imputing the mean values of all the points that fall in a leaf or terminal node , so incase if we have an outlier , then those will drive the value of mean and hence cause higher RMSE or SSE. So , it would be good to see the effect of removing or capping outliers and then performing decision tree.
+-   One food for thought is that this is a regression tree and we are imputing the mean values of all the points that fall in a leaf or terminal node , so incase if we have an outlier , then those will drive the value of mean and hence cause higher RMSE or SSE. 
 
 -   The smaller the value of complex parameter , the model is expected to have high variance as a split would be performed if we get such a marginal increase in entropy . Therefore , to prevent our model from overfitting amd having high variance , it is better if we not choose too small values of cp i.e. complexity parameter.
 
--   The default value of max depth parameter here is 30 but given that we have only 47 nodes in our dataset , it dfoes not make much sense to have tree models greater than or equal to 3 or 4 levels of depth
+-   The default value of max depth parameter here is 30 but given that we have only 47 nodes in our dataset , it does not make much sense to have tree models greater than or equal to 3 or 4 levels of depth
 
 -   minsplit hyperparameter : The default value of this parameter is 20 i.e. a split would be performed if we have atleast 20 datapoints in a node , although it is generally good to have higher values of "minsplit" parameter to avoid overfitting but since in this problem statement , the total \# of datapoints is only 47 , so this is one parameter where we can tweak in a bit .
 
@@ -164,7 +164,7 @@ pred_table[nrow(pred_table)+1,]=c(i,j,mean(unlist(CV_mse)))
 
 [**#Analysis**]{style="color:red"}
 
--   Identifying the optimal value of the hyperparameter maxDepth (which comes out to be around 2 with min_split within range of 5-15 (rmse is same for different values of min_split))
+-   Identifying the optimal value of the hyperparameter maxDepth (which comes out to be 3 with min_split within range of 5-15 (rmse is same for different values of min_split))
 
 ```{r}
 options(scipen=999)
@@ -356,6 +356,19 @@ Note: while the above 3 variables are also significant features here is the vari
 Another point to note here is that after Hyperparameter tuning, Decision tree is giving lower RMSE, and is most likely over-fitting the data-set, in comparison to Random Forest, and if we had a test data, RF model would most likely perform better, because of better generalization.
 
 ## Question 10.2
+
+
+### Logistic Regression finds many use cases in the healthcare analytics domain , one of them being predicting the probability of readmission within 30 days of being discharged . The above problem depends on lot of factors , the primary ones being discussed below : 
+
++ Dicharge Disposition : The discharge disposition/location code is an important factor for determining the probability of readmission . People with a relatively high risk score and requiring post acute care when  discharged directly to home are more prone to getting readmitted. 
+
++ Length of Stay : The period/length of stay also has a strong predictive power on the probability of readmission. Both low and high values are correlated with higher readmission rate.Low length of stay can lead to readmission due to patient not being treated properly without proper diagnosis and people with higher length of stay get readmitted due to Hospital acquired diseases.
+
++ Risk Score : The overall risk score of a patient based on past medical history and demographics is also a good prediction variable for the probability of readmission. 
+
++ Change in medication/procedure during hospitalization : This is also a significant feature related with higher readmission rates. People who have seen greater changes in procedure/prescribed medicine are more prone to getting readmitted.
+
++ Number of ED/IP visits within the rolling 1 year : This utilization metric is also a good predictor as it encapsulates the overall profile of a patient . Patients with higher ED/IP visits are more prone to getting readmitted within 30 days of being discharged.
 
 ## Question 10.3
 
