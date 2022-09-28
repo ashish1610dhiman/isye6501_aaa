@@ -1,0 +1,364 @@
+---
+title: "Homework-5"
+date: "26 September 2022"
+---
+
+## Question 10.3
+
+```{r, include=FALSE}
+library(caret)
+library(ROCR)
+```
+
+```{r}
+german_data = read.table("../germancredit.txt")
+german_data
+```
+
+```{r}
+cols = colnames(german_data)
+for(i in seq(1, length(cols))){
+  if(class(german_data[, cols[i]]) == "character"){
+    german_data[, cols[i]]= as.factor(german_data[, cols[i]])
+  }
+}
+```
+
+### Exploratory Data Analysis
+
+```{r}
+summary(german_data)
+```
+
+We can see that the data is uniformly distributed, both for the numerical features as well as categorical features.
+
+
+```{r}
+par(mfrow=(c(1,2)))
+plot(german_data$V5)
+plot(german_data$V2)
+```
+
+2 features has suspiciously large max values (comparing to the 3rd quartile).
+
+
+```{r}
+# (1 = Good, 2 = Bad) -> (0 = Good, 1 = Bad)
+german_data['V21'] = lapply(german_data['V21'], function(x){
+  x-1
+})
+german_data[,"V21"] = as.factor(german_data[,"V21"])
+german_data
+```
+
+```{r}
+split_data = function(dataset){
+  ## Sampling train and test data
+
+  ## 75% of the sample size
+  smp_size <- floor(0.75 * nrow(dataset))
+  
+  ## set the seed to make your partition reproducible
+  set.seed(123)
+  train_ind <- sample(seq_len(nrow(dataset)), size = smp_size)
+  
+  train <- dataset[train_ind, ]
+  test <- dataset[-train_ind, ]
+  return(list("train"=train, "test"=test))
+}
+```
+
+### Splitting the data into train and test
+
+```{r}
+df_list = split_data(german_data)
+train = df_list$train
+test = df_list$test
+summary(test$V21)
+```
+
+### Training vanilla model with all features
+
+```{r}
+model <- glm(V21 ~.,family=binomial(link='logit'),data=train)
+model
+```
+
+```{r}
+summary(model)
+```
+
+
+```{r}
+get_roc_plot_and_auc = function(model, test){
+  p <- predict(model, newdata=test[, 1:(length(test)-1)], type="response")
+  pr <- prediction(p, test$V21)
+  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  auc <- performance(pr, measure = "auc")
+  auc <- auc@y.values[[1]]
+  return (list("prf"=prf, "auc"=auc, "prediction"=p))
+}
+```
+
+### Plotting the ROC Curve and calculating AUC
+
+```{r}
+roc = get_roc_plot_and_auc(model, test)
+plot(roc$prf)
+roc$auc
+```
+
+As we can see that AUC value is 0.7846446 that is close to 1. Hence there is our model is above average in being able to separate between classes.
+
+
+```{r}
+predicted = ifelse(roc$prediction > 0.5,1,0)
+cor = confusionMatrix(data=as.factor(predicted), reference=as.factor(test$V21), positive="1")
+cor
+```
+
+```{r}
+cor$byClass
+```
+
+With and initial (default) threshold of 0.5, we can see that our model achieves an accuracy of 75.6% with a recall of 54.3% and precision of 64.7%. We can try dropping some statistically insignificant features to better improve the meterics of our model.
+
+### Dropping Features
+
+```{r}
+# We can drop statistically insignificant features
+drop.features = german_data
+drops <- c("V7","V17", "V11", "V13", "V16", "V12")
+drop.features = drop.features[ , !(names(drop.features) %in% drops)]
+```
+
+
+```{r}
+df.list.1 = split_data(drop.features)
+train.1 = df.list.1$train
+test.1 = df.list.1$test
+```
+
+
+```{r}
+model.1 <- glm(V21 ~.,family=binomial(link='logit'),data=train.1)
+model.1
+```
+
+
+```{r}
+summary(model.1)
+```
+
+
+```{r}
+roc.1 = get_roc_plot_and_auc(model.1, test.1)
+plot(roc.1$prf)
+roc.1$auc
+```
+
+We can observe that dropping insignificant features help us achieve a higher AUC value. Hence this increases our model's ability to seperate between the classes.
+
+```{r}
+predicted.1 = ifelse(roc.1$prediction > 0.5,1,0)
+cor.1 = confusionMatrix(data=as.factor(predicted.1), reference=as.factor(test.1$V21), positive="1")
+cor.1
+```
+
+```{r}
+cor.1$byClass
+```
+
+Again we can observe that with the initial (default) value of threshold - 0.5, we have increased the accuracy of our model. While the recall remains unchanged, we were able to increase the precision.
+
+### Determining Threshold by F-Beta Value
+
+```{r}
+get_recall_and_precision = function(cor){
+  cor_table = data.frame(cor$table)
+  tn = cor_table[cor_table$Prediction==0 & cor_table$Reference==0, "Freq"]
+  fn = cor_table[cor_table$Prediction==0 & cor_table$Reference==1, "Freq"]
+  tp = cor_table[cor_table$Prediction==1 & cor_table$Reference==1, "Freq"]
+  fp = cor_table[cor_table$Prediction==1 & cor_table$Reference==0, "Freq"]
+  recall = tp / (tp + fn)
+  precision = tp / (tp + fp)
+  return (c("recall"=recall, "precision"=precision))
+}
+```
+
+We can use the F-Beta value for determining the best value of threshold. As we are given that a classifying a "bad" customer as "good" is 5 times worse than classifying "good" customer as "bad". We need to determine the best value of threshold that will help us increase recall and accordingly lower the value of false negatives (positive class is 1 i.e. "bad").
+
+```{r}
+rp.df = data.frame("threshold"=double(), "recall"=double(), "precision"=double(), f_beta=double())
+for(i in seq(0, 100, 1)){
+  beta=2
+  predicted.2 = ifelse(roc.1$prediction > i/100,1,0)
+  cor.2 = confusionMatrix(data=as.factor(predicted.2), reference=as.factor(test.1$V21), positive = "1")
+  rp = get_recall_and_precision(cor.2)
+  f_beta = ((1 + beta^2) * rp[2] * rp[1]) / (beta^2 * rp[2] + rp[1])
+  rp.df[nrow(rp.df)+1,] = c("threshold"=i/100, rp, f_beta)
+}
+```
+
+We are using F2 specifically which helps us weight recall more than precision. Since we want to maximize recall and minimize false negative due to higher cost associated with it, F2 will help us determine the best threshold value. Since F2 can range from 0 to 2, the higher the value of F2 - the better the threshold to minimize false negative.
+
+
+```{r}
+rp.df
+```
+
+```{r}
+# Max value of F Beta Score
+rp.df[which.max(rp.df$f_beta),]
+```
+***Plotting the best value of threshold for maximum F2 value***
+
+```{r}
+plot(x=rp.df$threshold, y=rp.df$f_beta, type="o", xlab="Probability Threshold", ylab="F Beta Score", main="F2 v/s Threshold")
+points(x=rp.df$threshold[which.max(rp.df$f_beta)], y=rp.df$f_beta[which.max(rp.df$f_beta)], pch = 18, col = "red", type = "b", lty = 2)
+```
+
+We can see from the above plot that best value that minimizes false negatives is 0.11.
+
+
+### Determining Threshold by Calculating Error Rate
+
+```{r}
+get_cm_value = function(cor){
+  cor_table = data.frame(cor.2$table)
+  tn = cor_table[cor_table$Prediction==0 & cor_table$Reference==0, "Freq"]
+  fn = cor_table[cor_table$Prediction==0 & cor_table$Reference==1, "Freq"]
+  tp = cor_table[cor_table$Prediction==1 & cor_table$Reference==1, "Freq"]
+  fp = cor_table[cor_table$Prediction==1 & cor_table$Reference==0, "Freq"]
+  return(list(tn=tn,fn=fn,tp=tp,fp=fp))
+}
+```
+
+Another way determine the threshold is by calculating the error value by weighing the false negatives more than false positive. As we know that false negatives are 5 time more costly than false positive, we can use that information while calculating our error value.
+We need to choose the value of threshold which minimizes the error. 
+
+```{r}
+## Minimizing the error
+## Since we know FN is 5 times worse than FP, we minimize the error that gives us the best threshold
+
+error.df = data.frame("threshold"=double(), "error"=double())
+for(i in seq(0, 100, 1)){
+  beta=2
+  predicted.2 = ifelse(roc.1$prediction > i/100,1,0)
+  cor.2 = confusionMatrix(data=as.factor(predicted.2), reference=as.factor(test.1$V21), positive = "1")
+  cm.values = get_cm_value(cor.2)
+  total_error = (5*cm.values$fn + cm.values$fp)/nrow(german_data)
+  error.df[nrow(error.df)+1,] = c("threshold"=i/100, "error"=total_error)
+}
+```
+
+
+```{r}
+error.df[which.min(error.df$error),]
+```
+
+We can again see that our error value is minimum at the threshold value of 0.11. This is in sync with our value of threshold which we determined via F-beta method. This this value of threshold is optimal.
+
+```{r}
+plot(error.df)
+points(x=error.df$threshold[which.min(error.df$error)], y=error.df$error[which.min(error.df$error)], pch = 18, col = "red", type = "b", lty = 2)
+```
+
+### Final Model
+
+```{r}
+final.predicted = ifelse(roc.1$prediction > 0.11,1,0)
+final.cor = confusionMatrix(data=as.factor(final.predicted), reference=as.factor(test.1$V21), positive="1")
+final.cor
+```
+
+
+```{r}
+final.cor$byClass
+```
+
+By choosing our threshold to be 0.11, we can achieve a recall value of 0.91. While our precision has gone down, we are not making mistakes with false negatives which are more costly to us.
+
+In our test data, the no. of "bad" classified data points was ~33%. We were able to achieve a threshold value of 0.11 which is 1/3rd of that value.
+
+
+### Bucketing and New Feature
+
+```{r}
+## Creating feature - Credit Amount(V5) / Duration in months(V2)
+
+feature_data.1 = german_data
+feature_data.1['V22'] = with(feature_data.1, V5/V2)
+feature_data.1
+```
+
+
+```{r}
+summary(feature_data.1$V22)
+```
+
+```{r}
+feature_data.1["Bucket"] = ""
+feature_data.1[feature_data.1$V22 <= 89.60, "Bucket"] = "<=89.60"
+feature_data.1[feature_data.1$V22 <= 130.33 & feature_data.1$V22 > 89.60, "Bucket"] = ">89.60 & <=130.33"
+feature_data.1[feature_data.1$V22 <= 206.18 & feature_data.1$V22 > 130.33, "Bucket"] = ">130.33 & <=206.18"
+feature_data.1[feature_data.1$V22 > 206.18, "Bucket"] = ">206.18"
+```
+
+
+```{r}
+feature_data.1
+```
+
+```{r}
+plot(as.factor(x=feature_data.1$Bucket), y=feature_data.1$V21)
+```
+
+```{r}
+feature_data.1 = feature_data.1[,1:length(feature_data.1)-1]
+feature_data.1 = feature_data.1[,c(seq(1,20), 22, 21)]
+drops <- c("V5","V2")
+feature_data.1[ , !(names(feature_data.1) %in% drops)]
+```
+
+
+
+```{r}
+## Sampling train and test data
+
+## 75% of the sample size
+smp_size <- floor(0.75 * nrow(feature_data.1))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(feature_data.1)), size = smp_size)
+
+feature.1.train <- feature_data.1[train_ind, ]
+feature.1.test <- feature_data.1[-train_ind, ]
+
+model.1 <- glm(V21 ~.,family=binomial(link='logit'),data=feature.1.train)
+```
+
+```{r}
+model.1
+```
+
+```{r}
+p.1 <- predict(model.1, newdata=feature.1.test[, 1:(length(feature.1.test)-1)], type="response")
+pr.1 <- prediction(p.1, feature.1.test$V21)
+prf.1 <- performance(pr.1, measure = "tpr", x.measure = "fpr")
+plot(prf.1)
+auc.1 <- performance(pr.1, measure = "auc")
+auc.1 <- auc.1@y.values[[1]]
+auc.1
+```
+
+
+```{r}
+predicted.1 = ifelse(p.1 > 0.35,1,0)
+confusionMatrix(data=as.factor(predicted.1), reference=as.factor(feature.1.test$V21))
+```
+
+
+
+
