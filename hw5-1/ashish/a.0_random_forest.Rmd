@@ -23,7 +23,7 @@ dim(crime_df)
 Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
 
 | Variable | Description                                                                            |
-|-----------------|-------------------------------------------------------|
+|-------------------|-----------------------------------------------------|
 | M        | percentage of males aged 14--24 in total state population                              |
 | So       | indicator variable for a southern state                                                |
 | Ed       | mean years of schooling of the population aged 25 years or over                        |
@@ -69,17 +69,22 @@ rmse_func(true = crime_df$Crime, predicted=rf_model_v0$predicted)
 ```
 
 ```{r}
-rf_model_v1 = randomForest(Crime ~ ., data = crime_df, ntree = 100)
+rf_model_v1 = randomForest(Crime ~ ., data = crime_df, ntree = 100,importance=TRUE)
 rmse_func(true = crime_df$Crime, predicted=rf_model_v1$predicted)
 ```
 
 ```{r}
-rf_model_v2 = randomForest(log(Crime) ~ ., data = crime_df, ntree = 100)
+rf_model_v2 = randomForest(log(Crime) ~ ., data = crime_df, ntree = 100,importance=TRUE)
 rmse_func(true = crime_df$Crime, predicted=exp(rf_model_v2$predicted))
 ```
 
 ```{r}
-varImpPlot(rf_model_v2)
+varImpPlot(rf_model_v1,sort = TRUE)
+```
+
+```{r}
+rf_model_v3 = randomForest(Crime ~ . - Ineq -So -Pop, data = crime_df, ntree = 100)
+rmse_func(true = crime_df$Crime, predicted=rf_model_v3$predicted)
 ```
 
 ```{r}

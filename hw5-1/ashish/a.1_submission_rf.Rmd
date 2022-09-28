@@ -1,0 +1,164 @@
+---
+title: "Random Forest | Ques 10.1"
+author: "Ashish Dhiman"
+date: "2022-09-26"
+output: html_document
+---
+
+### Read Data
+
+```{r}
+set.seed(77)
+library(randomForest)
+
+crime_df = read.table("../uscrime.txt", sep="\t", header= TRUE)
+dim(crime_df)
+```
+
+#### Data and variable meaning:
+
+Criminologists are interested in the effect of punishment regimes on crime rates. This has been studied using aggregate data on 47 states of the USA for 1960.
+
+| Variable | Description                                                                            |
+|--------------------|----------------------------------------------------|
+| M        | percentage of males aged 14--24 in total state population                              |
+| So       | indicator variable for a southern state                                                |
+| Ed       | mean years of schooling of the population aged 25 years or over                        |
+| Po1      | per capita expenditure on police protection in 1960                                    |
+| Po2      | per capita expenditure on police protection in 1959                                    |
+| LF       | labour force participation rate of civilian urban males in the age-group 14-24         |
+| M.F      | number of males per 100 females                                                        |
+| Pop      | state population in 1960 in hundred thousands                                          |
+| NW       | percentage of nonwhites in the population                                              |
+| U1       | unemployment rate of urban males 14--24                                                |
+| U2       | unemployment rate of urban males 35--39                                                |
+| Wealth   | wealth: median value of transferable assets or family income                           |
+| Ineq     | income inequality: percentage of families earning below half the median income         |
+| Prob     | probability of imprisonment: ratio of number of commitments to number of offenses      |
+| Time     | average time in months served by offenders in state prisons before their first release |
+| Crime    | crime rate: number of offenses per 100,000 population in 1960                          |
+
+```{r}
+crime_df$So <- factor(crime_df$So)
+```
+
+### Build Vanilla RF model
+
+```{r}
+rf_model_v0 = randomForest(Crime ~ ., data = crime_df)
+summary(rf_model_v0)
+
+rmse_func = function(true,predicted){
+  (mean((true-predicted)^2))**0.5
+}
+
+rmse_func(true = crime_df$Crime, predicted=rf_model_v0$predicted)
+
+varImpPlot(rf_model_v1,sort = TRUE)
+```
+
+From variable importance we can see that the some variables like, Ineq, So and Pop are not very helpful. In the CV stage below, we will test models without these variables.
+
+```{r}
+rf_model_v1 = randomForest(Crime ~ . -Ineq -U1, data = crime_df, importance = TRUE)
+varImpPlot(rf_model_v1)
+```
+
+### Build RF and tune hyperparams with CV
+
+#### Build CV folds
+
+```{r}
+n_folds = 5
+folds <- sample(rep(1:n_folds, length.out = nrow(crime_df)), size = nrow(crime_df), replace = F)
+
+table(folds)
+```
+
+We have created uniform CV folds here
+
+#### Function for RF on CV fold
+
+```{r}
+CV_rf_func = function(test_fold, ntree1, mtry1){
+  model1 <- randomForest(Crime ~ ., data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  model2 <- randomForest(Crime ~ . -Ineq -U1, data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  model3 <- randomForest(Crime ~ . -Ineq - Pop - U2, data = crime_df[folds != test_fold,],
+                        ntree = ntree1, mtry=mtry1)
+  
+  preds1 <- predict(model1,  crime_df[folds == test_fold,])
+  preds2 <- predict(model2,  crime_df[folds == test_fold,])
+  preds3 <- predict(model3,  crime_df[folds == test_fold,])
+  
+  rmse1 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds1)
+  rmse2 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds2)
+  rmse3 = rmse_func(true = crime_df[folds == test_fold,"Crime"],predicted = preds3)
+  
+  return(c(rmse1,rmse2,rmse3))
+}
+
+```
+
+```{r, warning=FALSE, message=FALSE}
+rmse_list1=c()
+rmse_list2=c()
+rmse_list3=c()
+
+for (ntree_i in seq(30,130,10)) {
+  for (mtry_i in seq(2,12,1)) {
+    #RMSE on each CV Fold for ntree_i,mtry_i
+    rmse_cv_all = lapply(seq(1:5), function(fold) 
+      CV_rf_func(test_fold = fold, ntree1 = ntree_i, mtry1 = mtry_i))
+    rmse_cv_df = do.call(rbind.data.frame, rmse_cv_all)
+    rmse_cv1 = mean(unlist(rmse_cv_df[,1]))
+    rmse_cv2 = mean(unlist(rmse_cv_df[,2]))
+    rmse_cv3 = mean(unlist(rmse_cv_df[,3]))
+    print (paste("For tree:",ntree_i,"mtry:",mtry_i))
+    rmse_list1 = c(rmse_list1, rmse_cv1)
+    rmse_list2 = c(rmse_list2, rmse_cv2)
+    rmse_list3 = c(rmse_list3, rmse_cv3)
+}
+}
+```
+
+```{r}
+rmse_df = cbind.data.frame(seq(30,130,10),seq(2,12,1),
+                           rmse_list1,rmse_list2,rmse_list3)
+names(rmse_df)=c("ntree","mtry","rmse_model1","rmse_model2","rmse_model3")
+```
+
+```{r}
+rmse_df
+```
+
+```{r}
+print ("Min RMSE model 1")
+rmse_df[which.min(rmse_df[,"rmse_model1"]),]
+
+print ("Min RMSE model 2")
+rmse_df[which.min(rmse_df[,"rmse_model2"]),]
+
+print ("Min RMSE model 3")
+rmse_df[which.min(rmse_df[,"rmse_model3"]),]
+```
+
+### Best Model is therefore given for:
+
+1.  Dropping variables:
+2.  number of trees = 60
+3.  mtry = 5
+
+Not only thus by RMSE, but by intution too this is a simpler model since it has lesser features, lower number of trees, as well as lower number of features to split on in RF.
+
+Using the above hyper-parameters we can build the best model on full data.
+
+```{r}
+rf_final_model <- randomForest(Crime ~ . -Ineq -Pop, data = crime_df, ntree = 40, mtry=3, importance = TRUE)
+rmse_func(true=crime_df$Crime,predicted = rf_final_model$predicted)
+```
+
+```{r}
+varImpPlot(rf_final_model)
+```
