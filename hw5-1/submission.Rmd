@@ -95,7 +95,7 @@ rpart.plot(reg_tree)
 
 -   The above decision tree uses 3 variables NW , Pop, LF and Po1 to create a decision tree. (2 of them Pop and Po1 have a linear correlation with dependent variable i.e. Crime)
 
--   One food for thought is that this is a regression tree and we are imputing the mean values of all the points that fall in a leaf or terminal node , so incase if we have an outlier , then those will drive the value of mean and hence cause higher RMSE or SSE. 
+-   One food for thought is that this is a regression tree and we are imputing the mean values of all the points that fall in a leaf or terminal node , so incase if we have an outlier , then those will drive the value of mean and hence cause higher RMSE or SSE.
 
 -   The smaller the value of complex parameter , the model is expected to have high variance as a split would be performed if we get such a marginal increase in entropy . Therefore , to prevent our model from overfitting amd having high variance , it is better if we not choose too small values of cp i.e. complexity parameter.
 
@@ -345,7 +345,7 @@ From the variable importance plot we see, that the following variable feature ve
 2.  NW
 3.  Prob
 
-If we want we can still test if drop the lowest variables: Time and Pop is helpful.
+If we want we can still test if dropping the lowest variables, Time and Pop is helpful. This shall further simplify our model, which is especially helpful with small amount of data.
 
 ### Comparison between Decision Tree and Random Forest
 
@@ -357,18 +357,17 @@ Another point to note here is that after Hyperparameter tuning, Decision tree is
 
 ## Question 10.2
 
+### Logistic Regression finds many use cases in the healthcare analytics domain , one of them being predicting the probability of readmission within 30 days of being discharged . The above problem depends on lot of factors , the primary ones being discussed below :
 
-### Logistic Regression finds many use cases in the healthcare analytics domain , one of them being predicting the probability of readmission within 30 days of being discharged . The above problem depends on lot of factors , the primary ones being discussed below : 
+-   Dicharge Disposition : The discharge disposition/location code is an important factor for determining the probability of readmission . People with a relatively high risk score and requiring post acute care when discharged directly to home are more prone to getting readmitted.
 
-+ Dicharge Disposition : The discharge disposition/location code is an important factor for determining the probability of readmission . People with a relatively high risk score and requiring post acute care when  discharged directly to home are more prone to getting readmitted. 
+-   Length of Stay : The period/length of stay also has a strong predictive power on the probability of readmission. Both low and high values are correlated with higher readmission rate.Low length of stay can lead to readmission due to patient not being treated properly without proper diagnosis and people with higher length of stay get readmitted due to Hospital acquired diseases.
 
-+ Length of Stay : The period/length of stay also has a strong predictive power on the probability of readmission. Both low and high values are correlated with higher readmission rate.Low length of stay can lead to readmission due to patient not being treated properly without proper diagnosis and people with higher length of stay get readmitted due to Hospital acquired diseases.
+-   Risk Score : The overall risk score of a patient based on past medical history and demographics is also a good prediction variable for the probability of readmission.
 
-+ Risk Score : The overall risk score of a patient based on past medical history and demographics is also a good prediction variable for the probability of readmission. 
+-   Change in medication/procedure during hospitalization : This is also a significant feature related with higher readmission rates. People who have seen greater changes in procedure/prescribed medicine are more prone to getting readmitted.
 
-+ Change in medication/procedure during hospitalization : This is also a significant feature related with higher readmission rates. People who have seen greater changes in procedure/prescribed medicine are more prone to getting readmitted.
-
-+ Number of ED/IP visits within the rolling 1 year : This utilization metric is also a good predictor as it encapsulates the overall profile of a patient . Patients with higher ED/IP visits are more prone to getting readmitted within 30 days of being discharged.
+-   Number of ED/IP visits within the rolling 1 year : This utilization metric is also a good predictor as it encapsulates the overall profile of a patient . Patients with higher ED/IP visits are more prone to getting readmitted within 30 days of being discharged.
 
 ## Question 10.3
 
