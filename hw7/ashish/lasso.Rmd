@@ -1,0 +1,94 @@
+```{bash}
+ls ../
+```
+
+```{r, warning=FALSE}
+library(glmnet)
+```
+
+```{r}
+crime_df = read.table("../uscrime.txt", sep="\t", header= TRUE)
+dim(crime_df)
+```
+
+```{r}
+names(crime_df)
+```
+
+```{r}
+x = as.matrix(crime_df[,names(crime_df) != "Crime"])
+y = as.matrix(crime_df[,"Crime"])
+dim(x)
+dim(y)
+```
+
+```{r}
+fit <- glmnet(x, y, alpha = 1, nlambda = 20, standardize = TRUE)
+```
+
+```{r}
+print(fit)
+```
+
+```{r}
+plot(fit, xvar = "lambda", label = TRUE)
+```
+
+```{r}
+cvfit <- cv.glmnet(x = x, y = y, alpha = 1, nlambda = 30, standardize = TRUE, type.measure = "mse", nfolds = 5)
+```
+
+Because we have only 47 points in the data, we don't want fit too many models during the CV stage
+
+```{r}
+plot(cvfit)
+```
+
+Above plot gives CV error against values of lambda. With increasing Lambda the weight of regularization factor increases, and therefore the model is encouraged, to select lower number of predictors.
+
+```{r}
+print (cvfit)
+```
+
+Two special values along the 𝜆λ sequence are indicated by the vertical dotted lines. `lambda.min` is the value of λ that gives minimum mean cross-validated error, while `lambda.1se` is the value of λ that gives the most regularized model such that the cross-validated error is within one standard error of the minimum.
+
+```{r}
+coef(cvfit, s = "lambda.min")
+```
+
+```{r}
+coef(cvfit, s = "lambda.1se")
+```
+
+```{r}
+cvfit$lambda.1se
+```
+
+```{r}
+fit_1se <- glmnet(x, y, alpha = 1, lambda = cvfit$lambda.1se, standardize = TRUE)
+coef(fit_1se)
+
+fit_min <- glmnet(x, y, alpha = 1, lambda = cvfit$lambda.min, standardize = TRUE)
+coef(fit_min)
+```
+
+```{r}
+predict_min = predict(fit_min, newx = x, s = "lambda.min")
+predict_1se = predict(fit_1se, newx = x, s = "lambda.1se")
+```
+
+```{r}
+rmse_func = function(true,predicted){
+  (mean((true-predicted)^2))**0.5
+}
+```
+
+### RMSE for 
+
+```{r}
+rmse_func(true=y,predicted = predict_min)
+```
+
+```{r}
+rmse_func(true=y,predicted = predict_1se)
+```
