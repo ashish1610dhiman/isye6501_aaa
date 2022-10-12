@@ -1,0 +1,142 @@
+---
+title: "ISYE-6501 HW 7"
+author: "Anshit Verma"
+date: "11/10/2022"
+---
+
+## Question 11.1
+
+## Elastic Net
+
+* Elastic net is a combination of both Lasso and Ridge regression. It uses both L1 and L2 penalty to restrict the regression solution.
+* It involves two hyperparameters - Lambda and Alpha.
+* Alpha is used to give direction between Ridge and Lasso. Alpha = 0 is Ridge and Alpha = 1 is Lasso.
+* Lambda is amount of penalty in the regression.
+
+```{r}
+library(glmnet)
+```
+
+
+```{r}
+data = read.table("../uscrime.txt", sep="\t", header=TRUE)
+head(data)
+```
+
+```{r}
+x = as.matrix(data[, 1:ncol(data)-1])
+y = data[,"Crime"]
+```
+
+```{r}
+x = scale(x)
+```
+
+### Train Test Split
+
+```{r}
+n=nrow(data)
+train_rows <- sample(1:n, .8*n, replace = F)
+
+x.train <- x[train_rows,]
+y.train <- y[train_rows]
+
+x.test <- x[-train_rows,]
+y.test <- y[-train_rows]
+```
+
+* Splitting the data to get a value of MSE for deciding a value of alpha.
+
+### Estimating Lambda and Alpha - hyperparameters
+
+```{r}
+models <- list()
+for (i in 0:20) {
+  name <- paste0("alpha", i/20)
+  
+  models[[name]] <-
+    cv.glmnet(as.matrix(x.train), as.matrix(y.train), alpha=i/20, family="gaussian", nfold = 5)
+}
+```
+
+* We are fixing the value of alpha and using cross validation for find the value of lambda which minimizes the value of MSE - our metric for validation.
+* We find a minimum value of lambda which minimizes the MSE and another value of lambda one standard deviation apart as it is more practical. We are accepting some performance loss and incorporating more bias in the model.
+
+
+```{r}
+results <- data.frame()
+for (i in 0:20) {
+  name <- paste0("alpha", i/20)
+  
+  ## Use each model to predict 'y' given the Testing dataset
+  predicted <- predict(models[[name]], 
+                       s=models[[name]]$lambda.1se, newx=x.test)
+  
+  ## Calculate the Mean Squared Error...
+  mse <- mean((y.test - predicted)^2)
+  
+  ## Store the results
+  temp <- data.frame(alpha=i/20, mse=mse, name=name)
+  results <- rbind(results, temp)
+}
+```
+
+
+* After we have selected our lambda, we predict on the test data for getting the value of alpha.
+* Alpha is the parameter for deciding between ridge (L2 norm) penalty and lasso (L1 penalty) penalty.
+
+
+```{r}
+print(results)
+```
+
+```{r}
+plot(results$alpha, results$mse)
+```
+
+```{r}
+results[which.min(results$mse),]
+```
+
+It can be observed from the above outputs that the value of alpha at which we get the best fit and lowest value of MSE is at alpha = 0.3.
+
+--------  DO NOT INCLUDE AFTER THIS LINE ---------
+
+```{r}
+library(MASS)
+library(caret)
+```
+
+```{r}
+custom <- trainControl(method = "repeatedcv", number = 10, repeats = 5, verboseIter = TRUE)
+```
+
+```{r}
+set.seed(1234)
+en <- train(x = x.train, y = y.train,
+            method='glmnet',
+            tuneGrid =expand.grid(alpha=seq(0,1,length=10),
+                                  lambda = seq(0.0001,0.2,length=5)),
+            trControl=custom)
+```
+
+```{r}
+en
+```
+
+```{r}
+mean(en$resample$RMSE)
+```
+
+
+```{r}
+plot(en, main = "Elastic Net Regression")
+```
+
+```{r}
+plot(varImp(en,scale=TRUE))
+```
+
+
+
+
