@@ -7,7 +7,6 @@ output:
 date: "2022-10-12"
 ---
 
-
 # Submission HW4 \| Fall 22
 
 -   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
@@ -18,7 +17,7 @@ date: "2022-10-12"
 
 [**\*Analysis Notes are marked with Red header: #Analysis**]{style="color:red"}
 
-## Question 11.1 
+## Question 11.1
 
 ## Part 1 : Stepwise Regression
 
@@ -39,7 +38,6 @@ crime_data<-read.table(file = "./uscrime.txt", sep = "\t",header=TRUE)
 head(crime_data)
 dim(crime_data)
 ```
-
 
 ```{r}
 # Fitting the full model
@@ -94,21 +92,21 @@ vif(final_model)
 
 ```
 
-# Observations/Inferences : 
+# Observations/Inferences :
 
-1. The initial full model has 15 independent predictor variables.  Whereas , our final model output of the Stepwise Regression Model has 8 important predictor variables that minimizes the AIC value . These variables are evaluated on using the combination of forward selection and backward elimination methods iteratively. The lower the AIC value , the better the model as AIC value estimates the relative amount of information lost by a given model in an effort to estimate the actual model (Info Theory).
+1.  The initial full model has 15 independent predictor variables. Whereas , our final model output of the Stepwise Regression Model has 8 important predictor variables that minimizes the AIC value . These variables are evaluated on using the combination of forward selection and backward elimination methods iteratively. The lower the AIC value , the better the model as AIC value estimates the relative amount of information lost by a given model in an effort to estimate the actual model (Info Theory).
 
-2. Another point to note is that the Multiple R-squared of the final model is 0.789 which is lower than the initial model which has a value of 0.8031 but this is the pitfall of R squared value i.e. It will always increases with the increase in the # of variables without any penalty/adjustment for model complexity/overfitting unlike AIC or Adjusted R-squared.
+2.  Another point to note is that the Multiple R-squared of the final model is 0.789 which is lower than the initial model which has a value of 0.8031 but this is the pitfall of R squared value i.e. It will always increases with the increase in the \# of variables without any penalty/adjustment for model complexity/overfitting unlike AIC or Adjusted R-squared.
 
-3. If we observe Adjusted R squared value , it is higher for our final model with 8 independent predictor variables , thus the final model is validated to be better than the initial model on the basis of Adjusted R squared value too.
+3.  If we observe Adjusted R squared value , it is higher for our final model with 8 independent predictor variables , thus the final model is validated to be better than the initial model on the basis of Adjusted R squared value too.
 
 ![](adjs-R.png)
 
-Based on the above formula , we can infer that the Adjusted R squared value decreases with the increase in # of independent variables(k) until and unless if there is a significant increase in the R squared value on adding a new variable. Thus both AIC and Adjusted R squared provide a technique for selecting simpler model which prevents overfitting.
+Based on the above formula , we can infer that the Adjusted R squared value decreases with the increase in \# of independent variables(k) until and unless if there is a significant increase in the R squared value on adding a new variable. Thus both AIC and Adjusted R squared provide a technique for selecting simpler model which prevents overfitting.
 
-4. Also , based on the correlation plot it could be seen that variables Wealth and Income Inequality are 2 highly correlated variables (-ve correlation), hence we should pick only 1 variable out of the 2. Same goes for Po1 and Po2. So , if we see our final model , it has just Ineq (Income Inequality) and Po1 (one out of each pair of correlated variables ) and thus our stepwise regression model handles it implicitly.
+4.  Also , based on the correlation plot it could be seen that variables Wealth and Income Inequality are 2 highly correlated variables (-ve correlation), hence we should pick only 1 variable out of the 2. Same goes for Po1 and Po2. So , if we see our final model , it has just Ineq (Income Inequality) and Po1 (one out of each pair of correlated variables ) and thus our stepwise regression model handles it implicitly.
 
-5. Since , the Variance Inflation factor for all the predictor variables in the final output is less than 5 , we can infer that the problem of multicollinearity also does not reside in our final model.
+5.  Since , the Variance Inflation factor for all the predictor variables in the final output is less than 5 , we can infer that the problem of multicollinearity also does not reside in our final model.
 
 ## Part 2: Lasso Regression
 
@@ -124,6 +122,14 @@ y = as.matrix(crime_df[,"Crime"])
 dim(x)
 dim(y)
 ```
+
+Lasso Regression is fit with glmnet function. Here we have two parameters:
+
+-    alpha = 1 gives 1 weight to Lasso and 0 to Ridge
+
+-   lambda is another parameter is the weight for regularization in cost function
+
+Note the parameter standardizes the data, which is a requirement for Lasso
 
 ```{r}
 fit <- glmnet(x, y, alpha = 1, nlambda = 20, standardize = TRUE)
@@ -153,7 +159,7 @@ Above plot gives CV error against values of lambda. With increasing Lambda the w
 print (cvfit)
 ```
 
-Two special values along the 𝜆 sequence are indicated by the vertical dotted lines. `lambda.min` is the value of λ that gives minimum mean cross-validated error, while `lambda.1se` is the value of λ that gives the most regularized model such that the cross-validated error is within one standard error of the minimum.
+Two special values along the λ sequence are indicated by the vertical dotted lines. `lambda.min` is the value of λ that gives minimum mean cross-validated error, while `lambda.1se` is the value of λ that gives the most regularized model such that the cross-validated error is within one standard error of the minimum.
 
 ```{r}
 coef(cvfit, s = "lambda.min")
@@ -167,6 +173,10 @@ coef(cvfit, s = "lambda.1se")
 cvfit$lambda.1se
 ```
 
+Let us fit full models for these parameter values. While ideally we should pick model from CV stage, just to understand the functioning better we are selecting two models here.
+
+The nuance here is that while lambda.min minimizes CV error, We employ lasso for feature selection and hence one might argue lambda.1se is the parameter we should choose, since it minimizes the number of features selected.
+
 ```{r}
 fit_1se <- glmnet(x, y, alpha = 1, lambda = cvfit$lambda.1se, standardize = TRUE)
 coef(fit_1se)
@@ -174,6 +184,8 @@ coef(fit_1se)
 fit_min <- glmnet(x, y, alpha = 1, lambda = cvfit$lambda.min, standardize = TRUE)
 coef(fit_min)
 ```
+
+We also note here that the variables being dropped are similar to what we hypothesized in previous iterations of this exercise, say in RF and Linear Regression. With highly correlated features being dropped.
 
 ```{r}
 predict_min = predict(fit_min, newx = x, s = "lambda.min")
@@ -186,7 +198,7 @@ rmse_func = function(true,predicted){
 }
 ```
 
-### RMSE for 
+### RMSE for above two models
 
 ```{r}
 rmse_func(true=y,predicted = predict_min)
@@ -198,10 +210,10 @@ rmse_func(true=y,predicted = predict_1se)
 
 ## Part 3 : ElasticNet Regression
 
-* Elastic net is a combination of both Lasso and Ridge regression. It uses both L1 and L2 penalty to restrict the regression solution.
-* It involves two hyperparameters - Lambda and Alpha.
-* Alpha is used to give direction between Ridge and Lasso. Alpha = 0 is Ridge and Alpha = 1 is Lasso.
-* Lambda is amount of penalty in the regression.
+-   Elastic net is a combination of both Lasso and Ridge regression. It uses both L1 and L2 penalty to restrict the regression solution.
+-   It involves two hyperparameters - Lambda and Alpha.
+-   Alpha is used to give direction between Ridge and Lasso. Alpha = 0 is Ridge and Alpha = 1 is Lasso.
+-   Lambda is amount of penalty in the regression.
 
 ```{r}
 data = read.table("./uscrime.txt", sep="\t", header=TRUE)
@@ -230,7 +242,7 @@ x.test <- x[-train_rows,]
 y.test <- y[-train_rows]
 ```
 
-* Splitting the data to get a value of MSE for deciding a value of alpha.
+-   Splitting the data to get a value of MSE for deciding a value of alpha.
 
 ### Estimating Lambda and Alpha - hyperparameters
 
@@ -244,9 +256,8 @@ for (i in 0:20) {
 }
 ```
 
-* We are fixing the value of alpha and using cross validation for find the value of lambda which minimizes the value of MSE - our metric for validation.
-* We find a minimum value of lambda which minimizes the MSE and another value of lambda one standard deviation apart as it is more practical. We are accepting some performance loss and incorporating more bias in the model.
-
+-   We are fixing the value of alpha and using cross validation for find the value of lambda which minimizes the value of MSE - our metric for validation.
+-   We find a minimum value of lambda which minimizes the MSE and another value of lambda one standard deviation apart as it is more practical. We are accepting some performance loss and incorporating more bias in the model.
 
 ```{r}
 results <- data.frame()
@@ -266,10 +277,8 @@ for (i in 0:20) {
 }
 ```
 
-
-* After we have selected our lambda, we predict on the test data for getting the value of alpha.
-* Alpha is the parameter for deciding between ridge (L2 norm) penalty and lasso (L1 penalty) penalty.
-
+-   After we have selected our lambda, we predict on the test data for getting the value of alpha.
+-   Alpha is the parameter for deciding between ridge (L2 norm) penalty and lasso (L1 penalty) penalty.
 
 ```{r}
 print(results)
@@ -284,40 +293,3 @@ results[which.min(results$mse),]
 ```
 
 It can be observed from the above outputs that the value of alpha at which we get the best fit and lowest value of MSE is at alpha = 0.3.
-
---------  DO NOT INCLUDE AFTER THIS LINE ---------
-
-```{r}
-library(MASS)
-library(caret)
-```
-
-```{r}
-custom <- trainControl(method = "repeatedcv", number = 10, repeats = 5, verboseIter = TRUE)
-```
-
-```{r}
-set.seed(1234)
-en <- train(x = x.train, y = y.train,
-            method='glmnet',
-            tuneGrid =expand.grid(alpha=seq(0,1,length=10),
-                                  lambda = seq(0.0001,0.2,length=5)),
-            trControl=custom)
-```
-
-```{r}
-en
-```
-
-```{r}
-mean(en$resample$RMSE)
-```
-
-
-```{r}
-plot(en, main = "Elastic Net Regression")
-```
-
-```{r}
-plot(varImp(en,scale=TRUE))
-```
