@@ -17,7 +17,29 @@ date: "2022-09-12"
 
 ## Question 12.1
 
+Design of Experiments finds its use cases in various domains :
+
+One particular area where it is widely used is in : 
+
 ***Website design prototyping and Call to Action (CTA) Optimization***
+
+
+We can use it to evaluate the impact of adding a new functionality on a website to evaluate user interaction/user traffic on a website : 
+
+There are various aspects which we could experiment on : 
+
+* Location of the new feature on the website : 4 possible categories (Top Left , Top Right , Bottom Left , Bottom Right) to evaluate whether the new feature location would increase user engagement.
+
+* Color of the feature added : 3 possible categories (red,blue,green) - to see if a the color of the feature affects user interaction
+
+* Feature mobility: 2 categories (dynamic, static) - whether the feature should be static or dynamic (can help us evaluate if people are liking simplistic feature or they like more interactive/dynamic features).
+
+* Having couple of icons on the new feature : One good use case of this is when creating a "Pay Now" icon on the payment gateway website . Should we add an additional icon of "Return Back" adjacent to Pay now button because it may so happen that many people might not go through payment transactions and as a result of it the company's profitability might get impacted.So it's better to test out it's impact with some real data (Yes/No option , so 2 possible categories).
+
+* Size of the feature added : 3 possible categories (Small, Medium, Large) and it's impact on user liking/interaction.
+
+Thus , we will have a total of $4\cdot 3\cdot 2\cdot 2 \cdot 3$ = 144 combinations to test out . In order to get a better sampling distribution across each combination , we can think on reducing the total number of combinations using various factorial design techniques so that we do not have very less data corresponding to a possible combination and so that we could make some statistically significant inference about the user behavior.
+
 
 ## Question 12.2
 
