@@ -120,8 +120,8 @@ table(factorial_doe1$sum)
 
 Examples of data for the following distributions:
 
-a. **Binomial** - In finding defective items, the outcome could be either success (item is defective) or failure (item is non-defective).
-b. **Geometric** - For example, you ask people outside a polling station who they voted for until you find someone that voted for the independent candidate in a local election. The geometric distribution would represent the number of people who you had to poll before you found someone who voted independent. You would need to get a certain number of failures before you got your first success.
-c. **Poisson** - It gives the probability of an event happening a certain number of times (k) within a given interval of time or space. One example is no. of website visitors per month.
-d. **Exponential** - One example is the amount of time, in months, a car battery lasts.
-e. **Weibull** - One example is Warranty analysis. We are using data to model time-to-failure.
+a. **Binomial** - In finding defective items, the outcome could be either success (item is defective) or failure (item is non-defective). If you are doing this for multiple items and each item being selected is at random i.e. iid, then this example follows a Binomial distribution.
+b. **Geometric** - For example, you ask people outside a polling station who they voted for until you find someone that voted for the independent candidate in a local election. The geometric distribution would represent the number of people who you had to poll before you found someone who voted independent. You would need to get a certain number of failures before you got your first success. This example follows a Geometric distribution.
+c. **Poisson** - It gives the probability of an event happening a certain number of times (k) within a given interval of time or space. One example is no. of website visitors per month. We are using the arrivals of vistors to a website on a per month basis. This follows a Poisson distribution.
+d. **Exponential** - One example is the amount of time until an earthquake occurs. The time interval between earthquake follows an exponential distribution.
+e. **Weibull** - One example is lifetime of dental implants. We are using data to model time-to-failure. If you get new dental implants, after how long will the implants breaks. This follows a Weibull distribution.
