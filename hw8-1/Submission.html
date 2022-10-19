@@ -1648,6 +1648,42 @@ pre code {
 </ul>
 <div id="question-12.1" class="section level2">
 <h2>Question 12.1</h2>
+<p>Design of Experiments finds its use cases in various domains :</p>
+<p>One particular area where it is widely used is in :</p>
+<p><strong><em>Website design prototyping and Call to Action (CTA)
+Optimization</em></strong></p>
+<p>We can use it to evaluate the impact of adding a new functionality on
+a website to evaluate user interaction/user traffic on a website :</p>
+<p>There are various aspects which we could experiment on :</p>
+<ul>
+<li><p>Location of the new feature on the website : 4 possible
+categories (Top Left , Top Right , Bottom Left , Bottom Right) to
+evaluate whether the new feature location would increase user
+engagement.</p></li>
+<li><p>Color of the feature added : 3 possible categories
+(red,blue,green) - to see if a the color of the feature affects user
+interaction</p></li>
+<li><p>Feature mobility: 2 categories (dynamic, static) - whether the
+feature should be static or dynamic (can help us evaluate if people are
+liking simplistic feature or they like more interactive/dynamic
+features).</p></li>
+<li><p>Having couple of icons on the new feature : One good use case of
+this is when creating a “Pay Now” icon on the payment gateway website .
+Should we add an additional icon of “Return Back” adjacent to Pay now
+button because it may so happen that many people might not go through
+payment transactions and as a result of it the company’s profitability
+might get impacted.So it’s better to test out it’s impact with some real
+data (Yes/No option , so 2 possible categories).</p></li>
+<li><p>Size of the feature added : 3 possible categories (Small, Medium,
+Large) and it’s impact on user liking/interaction.</p></li>
+</ul>
+<p>Thus , we will have a total of <span class="math inline">\(4\cdot
+3\cdot 2\cdot 2 \cdot 3\)</span> = 144 combinations to test out . In
+order to get a better sampling distribution across each combination , we
+can think on reducing the total number of combinations using various
+factorial design techniques so that we do not have very less data
+corresponding to a possible combination and so that we could make some
+statistically significant inference about the user behavior.</p>
 </div>
 <div id="question-12.2" class="section level2">
 <h2>Question 12.2</h2>
@@ -1671,7 +1707,7 @@ n_variables = 10</code></pre>
 factorial_doe</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["A"],"name":[1],"type":["fct"],"align":["left"]},{"label":["B"],"name":[2],"type":["fct"],"align":["left"]},{"label":["C"],"name":[3],"type":["fct"],"align":["left"]},{"label":["D"],"name":[4],"type":["fct"],"align":["left"]},{"label":["E"],"name":[5],"type":["fct"],"align":["left"]},{"label":["F"],"name":[6],"type":["fct"],"align":["left"]},{"label":["G"],"name":[7],"type":["fct"],"align":["left"]},{"label":["H"],"name":[8],"type":["fct"],"align":["left"]},{"label":["J"],"name":[9],"type":["fct"],"align":["left"]},{"label":["K"],"name":[10],"type":["fct"],"align":["left"]}],"data":[{"1":"1","2":"1","3":"1","4":"0","5":"1","6":"1","7":"1","8":"0","9":"0","10":"0","_rn_":"1"},{"1":"1","2":"1","3":"0","4":"1","5":"1","6":"0","7":"0","8":"1","9":"0","10":"0","_rn_":"2"},{"1":"0","2":"0","3":"1","4":"1","5":"1","6":"0","7":"0","8":"0","9":"0","10":"1","_rn_":"3"},{"1":"0","2":"1","3":"0","4":"0","5":"0","6":"1","7":"0","8":"1","9":"1","10":"0","_rn_":"4"},{"1":"0","2":"1","3":"1","4":"1","5":"0","6":"0","7":"1","8":"0","9":"1","10":"0","_rn_":"5"},{"1":"1","2":"0","3":"1","4":"0","5":"0","6":"1","7":"0","8":"0","9":"1","10":"1","_rn_":"6"},{"1":"0","2":"1","3":"1","4":"0","5":"0","6":"0","7":"1","8":"1","9":"0","10":"1","_rn_":"7"},{"1":"0","2":"0","3":"0","4":"0","5":"1","6":"1","7":"1","8":"1","9":"0","10":"1","_rn_":"8"},{"1":"0","2":"0","3":"1","4":"0","5":"1","6":"0","7":"0","8":"1","9":"1","10":"0","_rn_":"9"},{"1":"0","2":"1","3":"0","4":"1","5":"0","6":"1","7":"0","8":"0","9":"0","10":"1","_rn_":"10"},{"1":"0","2":"0","3":"0","4":"1","5":"1","6":"1","7":"1","8":"0","9":"1","10":"0","_rn_":"11"},{"1":"1","2":"0","3":"0","4":"0","5":"0","6":"0","7":"1","8":"0","9":"0","10":"0","_rn_":"12"},{"1":"1","2":"0","3":"1","4":"1","5":"0","6":"1","7":"0","8":"1","9":"0","10":"0","_rn_":"13"},{"1":"1","2":"1","3":"1","4":"1","5":"1","6":"1","7":"1","8":"1","9":"1","10":"1","_rn_":"14"},{"1":"1","2":"0","3":"0","4":"1","5":"0","6":"0","7":"1","8":"1","9":"1","10":"1","_rn_":"15"},{"1":"1","2":"1","3":"0","4":"0","5":"1","6":"0","7":"0","8":"0","9":"1","10":"1","_rn_":"16"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["A"],"name":[1],"type":["fct"],"align":["left"]},{"label":["B"],"name":[2],"type":["fct"],"align":["left"]},{"label":["C"],"name":[3],"type":["fct"],"align":["left"]},{"label":["D"],"name":[4],"type":["fct"],"align":["left"]},{"label":["E"],"name":[5],"type":["fct"],"align":["left"]},{"label":["F"],"name":[6],"type":["fct"],"align":["left"]},{"label":["G"],"name":[7],"type":["fct"],"align":["left"]},{"label":["H"],"name":[8],"type":["fct"],"align":["left"]},{"label":["J"],"name":[9],"type":["fct"],"align":["left"]},{"label":["K"],"name":[10],"type":["fct"],"align":["left"]}],"data":[{"1":"1","2":"1","3":"0","4":"0","5":"1","6":"0","7":"0","8":"0","9":"1","10":"1","_rn_":"1"},{"1":"0","2":"0","3":"1","4":"0","5":"1","6":"0","7":"0","8":"1","9":"1","10":"0","_rn_":"2"},{"1":"0","2":"0","3":"1","4":"1","5":"1","6":"0","7":"0","8":"0","9":"0","10":"1","_rn_":"3"},{"1":"1","2":"1","3":"1","4":"0","5":"1","6":"1","7":"1","8":"0","9":"0","10":"0","_rn_":"4"},{"1":"1","2":"0","3":"0","4":"0","5":"0","6":"0","7":"1","8":"0","9":"0","10":"0","_rn_":"5"},{"1":"0","2":"1","3":"0","4":"0","5":"0","6":"1","7":"0","8":"1","9":"1","10":"0","_rn_":"6"},{"1":"0","2":"0","3":"0","4":"0","5":"1","6":"1","7":"1","8":"1","9":"0","10":"1","_rn_":"7"},{"1":"0","2":"0","3":"0","4":"1","5":"1","6":"1","7":"1","8":"0","9":"1","10":"0","_rn_":"8"},{"1":"0","2":"1","3":"0","4":"1","5":"0","6":"1","7":"0","8":"0","9":"0","10":"1","_rn_":"9"},{"1":"1","2":"0","3":"0","4":"1","5":"0","6":"0","7":"1","8":"1","9":"1","10":"1","_rn_":"10"},{"1":"0","2":"1","3":"1","4":"1","5":"0","6":"0","7":"1","8":"0","9":"1","10":"0","_rn_":"11"},{"1":"1","2":"0","3":"1","4":"1","5":"0","6":"1","7":"0","8":"1","9":"0","10":"0","_rn_":"12"},{"1":"1","2":"1","3":"0","4":"1","5":"1","6":"0","7":"0","8":"1","9":"0","10":"0","_rn_":"13"},{"1":"0","2":"1","3":"1","4":"0","5":"0","6":"0","7":"1","8":"1","9":"0","10":"1","_rn_":"14"},{"1":"1","2":"0","3":"1","4":"0","5":"0","6":"1","7":"0","8":"0","9":"1","10":"1","_rn_":"15"},{"1":"1","2":"1","3":"1","4":"1","5":"1","6":"1","7":"1","8":"1","9":"1","10":"1","_rn_":"16"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Note here 1 means binary variable present, and 0 means otherwise</p>
@@ -1707,22 +1743,22 @@ factorial_doe</code></pre>
 ## 
 ## The design itself:
 ##    A B C D E F G H J K
-## 1  1 1 1 0 1 1 1 0 0 0
-## 2  1 1 0 1 1 0 0 1 0 0
+## 1  1 1 0 0 1 0 0 0 1 1
+## 2  0 0 1 0 1 0 0 1 1 0
 ## 3  0 0 1 1 1 0 0 0 0 1
-## 4  0 1 0 0 0 1 0 1 1 0
-## 5  0 1 1 1 0 0 1 0 1 0
-## 6  1 0 1 0 0 1 0 0 1 1
-## 7  0 1 1 0 0 0 1 1 0 1
-## 8  0 0 0 0 1 1 1 1 0 1
-## 9  0 0 1 0 1 0 0 1 1 0
-## 10 0 1 0 1 0 1 0 0 0 1
-## 11 0 0 0 1 1 1 1 0 1 0
-## 12 1 0 0 0 0 0 1 0 0 0
-## 13 1 0 1 1 0 1 0 1 0 0
-## 14 1 1 1 1 1 1 1 1 1 1
-## 15 1 0 0 1 0 0 1 1 1 1
-## 16 1 1 0 0 1 0 0 0 1 1
+## 4  1 1 1 0 1 1 1 0 0 0
+## 5  1 0 0 0 0 0 1 0 0 0
+## 6  0 1 0 0 0 1 0 1 1 0
+## 7  0 0 0 0 1 1 1 1 0 1
+## 8  0 0 0 1 1 1 1 0 1 0
+## 9  0 1 0 1 0 1 0 0 0 1
+## 10 1 0 0 1 0 0 1 1 1 1
+## 11 0 1 1 1 0 0 1 0 1 0
+## 12 1 0 1 1 0 1 0 1 0 0
+## 13 1 1 0 1 1 0 0 1 0 0
+## 14 0 1 1 0 0 0 1 1 0 1
+## 15 1 0 1 0 0 1 0 0 1 1
+## 16 1 1 1 1 1 1 1 1 1 1
 ## class=design, type= FrF2</code></pre>
 <p>The #generators =10-4 = 6. B’cos 16 = 2^4.</p>
 <div id="properties-of-factorial-design" class="section level3">
@@ -1769,6 +1805,7 @@ table(factorial_doe1$sum)</code></pre>
 </div>
 <div id="question-13.1" class="section level2">
 <h2>Question 13.1</h2>
+<p>Examples of data for the following distributions:</p>
 <ol style="list-style-type: lower-alpha">
 <li><strong>Binomial</strong> - In finding defective items, the outcome
 could be either success (item is defective) or failure (item is

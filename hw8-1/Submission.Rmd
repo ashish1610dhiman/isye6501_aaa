@@ -118,8 +118,10 @@ table(factorial_doe1$sum)
 
 ## Question 13.1
 
-a.	**Binomial** - In finding defective items, the outcome could be either success (item is defective) or failure (item is non-defective).
-b.	**Geometric** - For example, you ask people outside a polling station who they voted for until you find someone that voted for the independent candidate in a local election. The geometric distribution would represent the number of people who you had to poll before you found someone who voted independent. You would need to get a certain number of failures before you got your first success.
-c.	**Poisson** - It gives the probability of an event happening a certain number of times (k) within a given interval of time or space. One example is no. of website visitors per month.
-d.	**Exponential** - One example is the amount of time, in months, a car battery lasts.
-e.	**Weibull** - One example is Warranty analysis. We are using data to model time-to-failure.
+Examples of data for the following distributions:
+
+a. **Binomial** - In finding defective items, the outcome could be either success (item is defective) or failure (item is non-defective).
+b. **Geometric** - For example, you ask people outside a polling station who they voted for until you find someone that voted for the independent candidate in a local election. The geometric distribution would represent the number of people who you had to poll before you found someone who voted independent. You would need to get a certain number of failures before you got your first success.
+c. **Poisson** - It gives the probability of an event happening a certain number of times (k) within a given interval of time or space. One example is no. of website visitors per month.
+d. **Exponential** - One example is the amount of time, in months, a car battery lasts.
+e. **Weibull** - One example is Warranty analysis. We are using data to model time-to-failure.
