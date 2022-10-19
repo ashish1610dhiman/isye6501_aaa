@@ -28,9 +28,18 @@ n_variables = 10
 ```
 
 ```{r}
-factorial_doe = FrF2(nruns = n_combinations,nfactors =  n_variables)
+factorial_doe = FrF2(nruns = n_combinations,nfactors =  n_variables,
+                     default.levels = c(0,1))
 factorial_doe
 ```
+
+Note here 1 means binary variable present, and 0 means otherwise
+
+```{r}
+summary(factorial_doe)
+```
+
+The #generators =10-4 = 6. B'cos 16 = 2\^4.
 
 ### Properties of Factorial Design
 
@@ -58,3 +67,14 @@ table(factorial_doe$A,factorial_doe$D)
 ```
 
 Above Behavior can again be generalized to prove the second assumption.
+
+### Feature distribution
+
+```{r}
+factorial_doe1 = as.data.frame(factorial_doe)
+```
+
+```{r}
+factorial_doe1$sum = as.numeric(factorial_doe1$A)+as.numeric(factorial_doe1$B)+as.numeric(factorial_doe1$C)+as.numeric(factorial_doe1$D)+as.numeric(factorial_doe1$E)+as.numeric(factorial_doe1$F)+as.numeric(factorial_doe1$G)+as.numeric(factorial_doe1$H)+as.numeric(factorial_doe1$J)+as.numeric(factorial_doe1$K)-10
+table(factorial_doe1$sum)
+```
