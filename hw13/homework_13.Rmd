@@ -1,0 +1,61 @@
+---
+title: "Homework_13"
+output: html_document
+date: "2022-11-28"
+---
+
+## Shelf Space Optimization - Retail Industry - Recommendations ##
+
+The shelf space optimization problem is widely used by various retail chains to streamline revenue growth and to enhance sales velocity for various categories of products.
+
+Data sources that could be useful :
+
+Computing the % share of shelf space . It could be quanitified in a variety of ways. 
+-> Linear Occupancy (shelf space) -> % of physical space occupied by selected products as a % of total # products.
+
+-> Eye-Level Facing -> How many facings of a product are placed at the eye level (buy level) as compared to the total # of products of that same category.
+
+Key variables impacting objective function : 
+-> Sales Price of products
+-> Replenishing rate
+-> Location of products (Vertical, Horizontal positioning)
+-> Size/Area of products
+-> Sizes/Areas of placement shelves (Vertical, Horizontal – important for space optimization)
+-> Average amount of products sold in a period (over time)
+-> Logistics costs (shipment to store)
+-> Historical purchase data
+
+
+A wide range of techniques are being currently deployed by various retail chains in order to counter the problem of shelf space optimization but such practices need to be evaluated properly before rolling them into production and that is where a lot of thinking and planning is needed to avoid any pitfalls and successfully parse through caveats.
+
+-\> Increasing the shelf area assigned to a given product and then evaluating its effect on the sales of that product over a period of time. But it is very tricky to evaluate the effect in an unbiased manner as there are various controlling factors that we need to account for (like seasonality , global macroeconomic events like supply side constraints, economic headwinds to counter inflation , global pandemic like covid etc.).
+
+For e.g. Suppose we are evaluating the effect of increased shelf size on the sales of products like icecream, cold drinks during the time when summer season is about to kick in , then our analysis might not be a true reflection of the actual impact of increased shelf size . So , it is imperative that we account for seasonality/demand trends. Also , we need to control for bias inherent in human behavior , for e.g. as per various research studies , products that are placed at eye level and those that are placed in clockwise direction(customer flow through stores) have comparatively higher sales velocity. Therefore , these factors must be accounted for when analyzing the impact of increased shelf size alone on sales growth.
+
+Moreover , the days since the launch of the product, brand of the product and product type also need to be controlled for in order to have an unbiased evaluation.
+
+We can use A/B testing to evaluate efficacy of increasing shelf size. But we need to be cognizant of the exploration vs exploitation conundrum here as one retail chain might not want to experiment on a product at a time when it's demand and supply is highly fluctuating , also the logistic and effort for replenishment aspect of things needs to be handled as increasing the shelf size of the product whose supply is highly constrained might not be a good idea as the same space can be utilized for some other in-demand product with slightly more robust supply chain . Bigger retail stores have an edge here over the newer stores as they have specialized supply chain and inventory management teams to look into these things and model accordingly.
+
+Also , the evaluation must be done in a similar store location .
+
+We can build a regression model to model the effect of all these features on the increase in sales over a period of time . Thus , it can be modeled as a combination of time series and regression model.
+
+
+-\> Analyzing the interaction affects- whether placing 2 complementary products together has an influence on the sales of each product. Various data mining algorithms used extensively in market basket analysis can be used here. Association Rule Mining techniques like Apriori algorithm can be used to evaluate the efficacy of interaction effect. Defining appropriate threshold support and confidence helps in clearly finding those products which greatly influence each other's sales.
+
+Analysis techniques to be used given that we have the requisite data : 
+
+1. Time Series Analysis : We can use exponential smoothing to model the sales forecast of a product. It would help us account for both seasonality and trend. The time series technique would also help in inventory management and division of shelf space among the product types. 
+
+2. Optimization models : linear/integer programming. Optimizing the overall store space because if we start reaching saturation in sales with 80% of the total store space occupied , then it doesn't make sense to stack up the entire store as it would lead to inventory getting piled up.
+Objective : Maximize Sales/ Revenue
+Constraints to be considered : 
+-> minimum amount of shelf space required
+-> maximum amount of shelf space that can be devoted
+-> total amount of shelf space that has to be used
+
+3. Data Mining Techniques: Apriori , FP Tree Algorithm -> Used to find hidden interactive patterns in the underlying data.
+
+4. Clustering technique : To create clusters of similar products (help us in product placement).
+
+5. Genetic Algorithm
