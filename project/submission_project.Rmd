@@ -57,6 +57,10 @@ One of the core competitive advantages of BharatPe at its inception was that it 
 
 With access to payments made to the SBO, now we can reasonably approximate the revenue of the SBO, and therefore its credit worthiness. There are two parts to this problem as given in the schematic below:
 
+```{r,echo=FALSE, out.width = "80%", fig.align = "center"}
+knitr::include_graphics("./6501_usecase1.drawio.png")
+```
+
 ### Classification Model: To Lend or not ?
 
 ### Regression Model: How much to lend ?
