@@ -1,0 +1,78 @@
+---
+title: "hw14"
+author: "Ashish Dhiman"
+date: "2022-12-05"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# HW 14 Submission \| Fall 22
+
+-   Ashish Dhiman \| [ashish.dhiman\@gatech.edu](mailto:ashish.dhiman@gatech.edu){.email}
+
+-   Abhinav Arun \| [aarun60\@gatech.edu](mailto:aarun60gatech.edu){.email}
+
+-   Anshit Verma \| [averma373\@gatech.edu](mailto:averma373@gatech.edu){.email}
+
+## 
+
+### Use-case 1: Recommend Repeat Purchase Products (Only Data Set 3)
+
+In this case we wan to build a model to recommend repeat purchases by a user, say Shampoo etc. The hypothesis here is that there exists certain type of products which a customer might purchase/consume repeatedly. In such a scenario we can use analytics to reccommend the user to a higher end product in the same category. Say a user buys a shampoo costing 10USD every other month, then we can recommend him a shampoo costing 20 USD.
+
+**So Given Data (X) on:**
+
+-   User
+
+-   Product
+
+-   Time spent on the product page the first time
+
+-   Time user spends on the product page (if he spends less time, might show repeat purchase)
+
+-   ratio of above two
+
+-   Purchase History:
+
+    -   Times bought in last n days , with variable n
+
+    -   time since last purchase
+
+    -   (days since purchase(k) - days since purchase(k+1))(days since purchase(k+1) - days since purchase(k+2)), with variable k
+
+**We can model:**
+
+Y: If particular user product is a repeat combination.
+
+Again this will be a classification model and training data can be created with the help of rules capturing above information.
+
+**This will result in:**
+
+In a probability score basis which we can decide if the user, product combination is a repeat purchase. If so, we can calculate his average repeat frequency as purchases in last year/1365 days. Using these two pieces of information we can reccomend him higher end products in the same category.
+
+### Use-case 2: Buy Now Pay Later(BNPL)
+
+With this case we want to use dataset 2 and dataset 3 to, predict if the merchant should offer services like Buy Now Pay later (or EMI) to the customer. Buy Now pay later (or Monthly installment) is an attractive manner for the customer to buy stuff out of his reach instantly and if it does not bring additional risk, it's hugely helpful in increasing the revenue.
+
+**So Given Data (X) on:**
+
+-   Credit History: Low risk ==\> More BNPL
+
+-   Balance on Credit Cards ==\> Should not have very high balance
+
+-   Credit Limit on Credit Cards ==\> Low credit limit would be more likely to access BNPL
+
+-   Monthly Commitments (Utilities Rent etc):
+
+-   Time spent on a product page for products not bought (Might measure want of a product)
+
+**We can model:**
+
+Y: If present options like BNPL to the user, translates to product purchase AND customer pays back money
+
+This will be a classification model. We want the model to predict not only if showing BNPL option transtates to a purchase, but also if the customer pays back the amount. To train this model we will first need to create the training data using experiments (possibly with A/B Testing). We can do a test where we randomly present BNPL options to some people vs a control group. If the test shows BNPL results in purchase, we can track them to see who paid back and thus create our final Y label. With this we can train our classification model.
+
+**This will result in:**
+
+In a probability score basis which we can decide if we should present BNPL options to a certain customer.
