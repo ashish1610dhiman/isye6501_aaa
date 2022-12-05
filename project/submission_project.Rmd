@@ -19,7 +19,7 @@ urlcolor: blue
 #### Table of Contents
 
 -   [Summary](#Summary)
--   [Backfround on Bharat Pe](#background)
+-   [Backfround on Zepto](#background)
 -   [Analytics Usecases](#usecases)
 -   [Usecase 1: Lending Activity](#usecase1)
 -   [Usecase 2:](#usecase2)
@@ -31,27 +31,11 @@ BharatPe is an Indian fin-tech company operating mainly in the payments space an
 
 Access to this rich payments data lends itself to a variety of analytics use-cases, and as part of this course project, we try to discuss our ideas on some of those use-cases.
 
-## Backfround on BharatPe and UPI {#background}
+## Backfround on Zepto {#background}
 
-### BharatPe
+## Problem Definition {#usecases}
 
-[BharatPe](https://bharatpe.com/companyprofile)
-
-### UPI
-
-[UPI](https://www.npci.org.in/what-we-do/upi/product-overview)
-
-monthly transactions. BharatPe was one of the key players to ride this wave of digital (UPI) payments.
-
-Access to this rich payments data lends itself to a variety of analytics use-cases, and as part of this course project, we try to discuss our ideas on some of those use-cases.
-
-monthly transactions. BharatPe was one of the key players to ride this wave of digital (UPI) payments.
-
-Access to this rich payments data lends itself to a variety of analytics use-cases, and as part of this course project, we try to discuss our ideas on some of those use-cases.
-
-### Analytics Usecases {#usecases}
-
-## Usecase 1: Lending Activity {#usecase1}
+## Modelling Methodology {#usecase1}
 
 One of the core competitive advantages of BharatPe at its inception was that it created a multiplatform UPI (QR code), which could be used with any 3rd party app to accept payments by the SBO. This greatly accelerated the on-boarding of SBOs to BharatPe, who were otherwise under serviced by the traditional lending players like Banks and NBFCs on account of high risk.
 
@@ -61,8 +45,4 @@ With access to payments made to the SBO, now we can reasonably approximate the r
 knitr::include_graphics("./6501_usecase1.drawio.png")
 ```
 
-### Classification Model: To Lend or not ?
-
-### Regression Model: How much to lend ?
-
-## Usecase 2: Personalisation Services
+### 
